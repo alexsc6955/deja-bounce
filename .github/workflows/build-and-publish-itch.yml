@@ -283,9 +283,13 @@ jobs:
           pip install .
           pip install pyinstaller
 
+      - name: Guard
+        run: |
+          python -c "import deja_bounce.scenes; print('OK: scenes importable')"
+
       # NOTE: onedir build (better for Defender + easier to debug)
       - name: Build Windows EXE with PyInstaller
-        run: pyinstaller --onedir --name "$env:GAME_NAME" --add-data "assets;assets" --add-binary "native_dlls\SDL2.dll;." --add-binary "native_dlls\SDL2_ttf.dll;." src\deja_bounce\__main__.py
+        run: pyinstaller --onedir --name "$env:GAME_NAME" --paths "src" --collect-submodules deja_bounce.scenes --collect-submodules mini_arcade_native_backend --collect-binaries mini_arcade_native_backend --copy-metadata mini-arcade-core --copy-metadata deja-bounce --add-data "assets;assets" --add-binary "native_dlls\SDL2.dll;." --add-binary "native_dlls\SDL2_ttf.dll;." src\deja_bounce\__main__.py
 
       - name: Package build as ZIP
         run: |
