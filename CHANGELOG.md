@@ -6,6 +6,17 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.0] - 2025-12-26
+
+### Added
+- add cheat codes and enhance logging setup in PongScene and utils
+
+### Changed
+- Pong scene: Implement command pattern for game actions, enhance pause functionality, and modularize systems
+
+### Other
+- Merge release/1.1 into develop
+
 ## [1.1.7] - 2025-12-19
 
 ### Added
