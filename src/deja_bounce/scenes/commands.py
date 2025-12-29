@@ -37,7 +37,7 @@ class StartGameCommand(BaseGameCommand):
     """BaseCommand to start the game."""
 
     def execute(self, context: Game) -> None:
-        context.change_scene("pong")
+        context.services.scenes.change("pong")
 
 
 class CycleDifficultyCommand(BaseGameCommand):
@@ -75,7 +75,7 @@ class PauseGameCommand(BaseGameCommand):
     """
 
     def execute(self, context: Game) -> None:
-        context.push_scene("pause", as_overlay=True)
+        context.services.scenes.push("pause", as_overlay=True)
 
 
 class MovePaddleCommand(BaseCommand):

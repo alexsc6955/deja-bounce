@@ -29,7 +29,7 @@ class BackToMenuCommand(BaseCommand):
     """
 
     def execute(self, context: Game) -> None:
-        context.change_scene("menu")
+        context.services.scenes.change("menu")
 
 
 @register_scene("pause")

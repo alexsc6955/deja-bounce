@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from mini_arcade_core.scenes import register_scene
 from mini_arcade_core.ui import BaseMenuScene, MenuItem, MenuStyle
+from mini_arcade_core.utils import logger
 
 from deja_bounce.constants import (
     BACKGROUND,
@@ -15,7 +16,6 @@ from deja_bounce.constants import (
     HIGHLIGHT,
     WHITE,
 )
-from deja_bounce.utils import logger
 
 from .commands import CycleDifficultyCommand, QuitCommand, StartGameCommand
 
