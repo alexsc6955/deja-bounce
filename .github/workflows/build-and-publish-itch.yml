@@ -285,7 +285,7 @@ jobs:
 
       # NOTE: onedir build (better for Defender + easier to debug)
       - name: Build Windows EXE with PyInstaller
-        run: pyinstaller --onedir --name "$env:GAME_NAME" --add-data "assets;assets" --add-binary "native_dlls\SDL2.dll;." --add-binary "native_dlls\SDL2_ttf.dll;." src\deja_bounce\__main__.py
+        run: pyinstaller --onedir --name "$env:GAME_NAME" --collect-submodules deja_bounce.scenes --collect-submodules mini_arcade_native_backend --collect-binaries mini_arcade_native_backend --copy-metadata mini-arcade-core --add-data "assets;assets" --add-binary "native_dlls\SDL2.dll;." --add-binary "native_dlls\SDL2_ttf.dll;." src\deja_bounce\__main__.py..
 
       - name: Package build as ZIP
         run: |
