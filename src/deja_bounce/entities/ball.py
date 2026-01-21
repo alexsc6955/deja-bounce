@@ -6,12 +6,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from mini_arcade_core.spaces.d2.geometry2d import (
-    Position2D,
-    Size2D,
-)
-
 from mini_arcade_core.spaces.d2.collision2d import RectCollider
+from mini_arcade_core.spaces.d2.geometry2d import Position2D, Size2D
 from mini_arcade_core.spaces.d2.physics2d import Velocity2D
 
 
