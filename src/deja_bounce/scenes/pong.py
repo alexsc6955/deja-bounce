@@ -14,6 +14,7 @@ from mini_arcade_core.engine.commands import CommandQueue
 from mini_arcade_core.engine.render.packet import RenderPacket
 from mini_arcade_core.runtime.context import RuntimeContext
 from mini_arcade_core.runtime.input_frame import InputFrame
+from mini_arcade_core.runtime.services import RuntimeServices
 from mini_arcade_core.scenes.autoreg import (  # pyright: ignore[reportMissingImports]
     register_scene,
 )
@@ -25,7 +26,7 @@ from mini_arcade_core.spaces.d2.boundaries2d import VerticalBounce
 from mini_arcade_core.spaces.d2.geometry2d import Bounds2D, Position2D, Size2D
 from mini_arcade_core.spaces.d2.physics2d import Velocity2D
 
-from deja_bounce.constants import PADDLE_SIZE
+from deja_bounce.constants import PADDLE_SIZE, ROOT
 from deja_bounce.controllers.cpu import CpuPaddleController
 from deja_bounce.difficulty import DIFFICULTY_PRESETS
 from deja_bounce.entities.ball import Ball
@@ -370,6 +371,7 @@ class PongCollisionSystem:
     Handle ball collisions with walls and paddles.
     """
 
+    services: RuntimeServices
     name: str = "pong_collision"
     order: int = 40
 
@@ -405,7 +407,9 @@ class PongCollisionSystem:
 
         # 1) Top / bottom bounce
         bounds = Bounds2D.from_size(Size2D(int(vw), int(vh)))
-        VerticalBounce(bounds).apply(ball)
+        bounced = VerticalBounce(bounds).apply(ball)
+        if bounced:
+            self.services.audio.play("wall_hit")
 
         # 2) Paddle collisions (use current velocity AFTER bounce)
         vx = ball.velocity.vx
@@ -415,12 +419,14 @@ class PongCollisionSystem:
                 ball.position.x = left.position.x + left.size.width
                 ball.velocity.vx = abs(ball.velocity.vx)
                 self._apply_paddle_influence(ctx, left)
+                self.services.audio.play("paddle_hit")
 
         elif vx > 0:
             if ball.collider.intersects(right.collider):
                 ball.position.x = right.position.x - ball.size.width
                 ball.velocity.vx = -abs(ball.velocity.vx)
                 self._apply_paddle_influence(ctx, right)
+                self.services.audio.play("paddle_hit")
 
 
 @dataclass
@@ -663,7 +669,7 @@ class PongScene(SimScene):
                 PaddleSystem(),
                 BallMovementSystem(),
                 PongTrailCaptureSystem(),
-                PongCollisionSystem(),
+                PongCollisionSystem(self.context.services),
                 PongRulesSystem(),
                 PongRenderSystem(),
             ]

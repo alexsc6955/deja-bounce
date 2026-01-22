@@ -13,8 +13,9 @@ from mini_arcade_core import (  # pyright: ignore[reportMissingImports]
 
 # Justification: in editable installs, this module is provided by the package.
 # pylint: disable=no-name-in-module
-from mini_arcade_native_backend import (
-    NativeBackend,  # pyright: ignore[reportMissingImports]
+from mini_arcade_native_backend import (  # pyright: ignore[reportMissingImports]
+    BackendSettings,
+    NativeBackend,
 )
 
 from deja_bounce.constants import ASSETS_ROOT, FPS, WINDOW_SIZE
@@ -34,8 +35,15 @@ def run():
     registry = SceneRegistry(_factories={}).discover("deja_bounce.scenes")
 
     font_path = ASSETS_ROOT / "fonts" / "deja_vu_dive" / "Deja-vu_dive.ttf"
+    sounds = {
+        "paddle_hit": str(ASSETS_ROOT / "sfx" / "paddle_hit.wav"),
+        "wall_hit": str(ASSETS_ROOT / "sfx" / "wall_hit.wav"),
+    }
 
-    backend = NativeBackend(font_path=str(font_path), font_size=24)
+    backend_settings = BackendSettings(
+        font_path=str(font_path), font_size=24, sounds=sounds
+    )
+    backend = NativeBackend(backend_settings=backend_settings)
     width, height = WINDOW_SIZE
     window = WindowConfig(
         width=width,
@@ -52,4 +60,5 @@ def run():
 
 
 if __name__ == "__main__":
+    run()
     run()
