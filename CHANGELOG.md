@@ -6,6 +6,17 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-01-23
+
+### Added
+- Add sounds
+
+### Changed
+- Clean up app.py and constants.py, adjust window size and remove unused comments in utils.py
+
+### Other
+- Merge branch 'release/1.3' of github.com:alexsc6955/deja-bounce into release/1.3
+
 ## [1.3.0] - 2026-01-22
 
 ### Changed
