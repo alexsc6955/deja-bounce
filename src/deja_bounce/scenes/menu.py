@@ -4,8 +4,10 @@ Minimal main menu scene for Deja Bounce.
 
 from __future__ import annotations
 
-from mini_arcade_core.scenes import register_scene
-from mini_arcade_core.ui import BaseMenuScene, MenuItem, MenuStyle
+from mini_arcade_core.engine.commands import QuitCommand
+from mini_arcade_core.runtime.context import RuntimeContext
+from mini_arcade_core.scenes.autoreg import register_scene
+from mini_arcade_core.ui.menu import BaseMenuScene, MenuItem, MenuStyle
 
 from deja_bounce.constants import (
     BACKGROUND,
@@ -15,9 +17,10 @@ from deja_bounce.constants import (
     HIGHLIGHT,
     WHITE,
 )
-from deja_bounce.utils import logger
-
-from .commands import CycleDifficultyCommand, QuitCommand, StartGameCommand
+from deja_bounce.scenes.commands import (
+    CycleDifficultyCommand,
+    StartGameCommand,
+)
 
 
 @register_scene("menu")
@@ -26,9 +29,9 @@ class MenuScene(BaseMenuScene):
     Simple main menu scene for Deja Bounce.
 
     Options:
-      [0] Start Game
-      [1] Quit
-      [2] Cycle Difficulty
+        [0] Start Game
+        [1] Quit
+        [2] Cycle Difficulty
     """
 
     @property
@@ -50,17 +53,29 @@ class MenuScene(BaseMenuScene):
             hint_color=(200, 200, 200),
         )
 
-    def menu_items(self):
-        logger.info("MenuScene on_enter")
+    @staticmethod
+    def get_difficulty_label(ctx: RuntimeContext) -> str:
+        """
+        Get the label for the difficulty menu item.
 
+        :param ctx: RuntimeContext for the scene.
+        :type ctx: RuntimeContext
+
+        :return: Label string showing the current difficulty.
+        :rtype: str
+        """
+        difficulty = ctx.settings.difficulty.upper()
+        return f"DIFFICULTY: {difficulty}"
+
+    def menu_items(self):
         items = [
-            MenuItem("START", "START", StartGameCommand()),
-            MenuItem("QUIT", "QUIT", QuitCommand()),
+            MenuItem("start", "START", StartGameCommand),
+            MenuItem("quit", "QUIT", QuitCommand),
             MenuItem(
+                "difficulty",
                 "DIFFICULTY",
-                "DIFFICULTY",
-                CycleDifficultyCommand(),
-                label_fn=lambda g: f"DIFFICULTY: {g.settings.difficulty.upper()}",
+                CycleDifficultyCommand,
+                label_fn=self.get_difficulty_label,
             ),
         ]
 

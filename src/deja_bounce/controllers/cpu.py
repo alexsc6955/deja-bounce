@@ -22,12 +22,13 @@ class CpuConfig:
     - dead_zone: how close to the ball center before it stops moving
     """
 
-    max_speed: float = 65.0  # slower = easier
+    max_speed: float = 65.0  # slower - easier
     dead_zone: float = (
         16.0  # larger dead_zone = CPU "overshoots" less, more human = easier
     )
     reaction_distance: float = 180.0
     error_margin: float = 24.0
+    inertia_factor: float = 1.0  # optional future use
 
 
 class CpuPaddleController:
@@ -41,6 +42,7 @@ class CpuPaddleController:
         self,
         paddle: Paddle,
         ball: Ball,
+        *,
         side: Side = "RIGHT",
         config: CpuConfig | None = None,
     ):
@@ -68,59 +70,46 @@ class CpuPaddleController:
         m = self.config.error_margin
         return random.uniform(-m, m) if m > 0 else 0.0
 
-    def _stop(self):
-        self.paddle.moving_up = False
-        self.paddle.moving_down = False
-
-    # Justification: dt is unused but kept for interface consistency
-    # pylint: disable=unused-argument
-    def update(self, dt: float):
+    def compute_move(self) -> float:
         """
-        Update CPU paddle movement based on ball position.
-
-        :param dt: Delta time since last update (unused).
-        :type dt: float
+        Decide paddle move direction:
+            -1.0 = up
+            0.0 = stop
+            +1.0 = down
         """
         vx = self.ball.velocity.vx
 
-        # React only when ball is coming toward THIS paddle
+        # React only when ball is moving toward this paddle
         if self.side == "RIGHT" and vx <= 0:
-            self._stop()
-            return
+            return 0.0
         if self.side == "LEFT" and vx >= 0:
-            self._stop()
-            return
+            return 0.0
 
-        # Distance-to-react should be side-correct
+        # Side-correct X distance check
         if self.side == "RIGHT":
             distance_x = self.paddle.position.x - (
                 self.ball.position.x + self.ball.size.width
             )
-        else:  # LEFT
+        else:
             distance_x = self.ball.position.x - (
                 self.paddle.position.x + self.paddle.size.width
             )
 
+        # Too far away? don't react
         if distance_x > self.config.reaction_distance:
-            self._stop()
-            return
+            return 0.0
 
-        # Y aiming (same as you already have)
-        ball_center = (
+        # Aim with error
+        ball_center_y = (
             self.ball.position.y
             + self.ball.size.height / 2
             + self._aim_offset_y
         )
-        paddle_center = self.paddle.position.y + self.paddle.size.height / 2
-        diff = ball_center - paddle_center
+        paddle_center_y = self.paddle.position.y + self.paddle.size.height / 2
+        diff = ball_center_y - paddle_center_y
 
+        # Dead zone = "human jitter reduction"
         if abs(diff) < self.config.dead_zone:
-            self._stop()
-            return
+            return 0.0
 
-        if diff < 0:
-            self.paddle.moving_up = True
-            self.paddle.moving_down = False
-        else:
-            self.paddle.moving_up = False
-            self.paddle.moving_down = True
+        return 1.0 if diff > 0 else -1.0

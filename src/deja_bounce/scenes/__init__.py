@@ -1,5 +1,6 @@
 """
 Scene modules for Deja Bounce.
+Importing this module will make all scenes available.
 """
 
 # TODO: Refactor cyclic imports later. (MenuScene <-> PongScene)

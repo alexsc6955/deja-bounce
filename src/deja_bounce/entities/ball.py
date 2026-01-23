@@ -1,24 +1,33 @@
 """
-This module defines the Ball class.
+Ball entity for the Pong scene.
 """
 
 from __future__ import annotations
 
-from mini_arcade_core.entity import KinematicEntity
-from mini_arcade_core.spaces.d2 import KinematicData
+from dataclasses import dataclass
 
-from deja_bounce.utils import logger
+from mini_arcade_core.spaces.d2.collision2d import RectCollider
+from mini_arcade_core.spaces.d2.geometry2d import Position2D, Size2D
+from mini_arcade_core.spaces.d2.physics2d import Velocity2D
 
-from .common import RectDrawMixin
 
-
-class Ball(RectDrawMixin, KinematicEntity):
+@dataclass
+class Ball:
     """
-    Ball entity using KinematicEntity.
+    Ball entity for the Pong scene.
+
+    :ivar position (Position2D): Position of the ball.
+    :ivar size (Size2D): Size of the ball.
+    :ivar velocity (Velocity2D): Velocity of the ball.
+    :ivar speed (float): Speed of the ball.
     """
 
-    def __init__(self, data: KinematicData):
-        super().__init__(data)
-        logger.info("Ball created")
-        self.base_vx = self.velocity.vx
-        self.base_vy = self.velocity.vy
+    position: Position2D
+    size: Size2D
+    velocity: Velocity2D
+    speed: float = 400.0
+
+    @property
+    def collider(self) -> RectCollider:
+        """Collider for the ball."""
+        return RectCollider(self.position, self.size)

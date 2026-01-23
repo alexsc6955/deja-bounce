@@ -516,14 +516,14 @@ files = [
 
 [[package]]
 name = "mini-arcade-core"
-version = "0.10.0"
+version = "1.0.0"
 description = "Tiny scene-based game loop core for small arcade games."
 optional = false
 python-versions = "<3.12,>=3.9"
 groups = ["main"]
 files = [
-    {file = "mini_arcade_core-0.10.0-py3-none-any.whl", hash = "sha256:ab12498afd0d275321407e6afab232fc8bacedb82389742d9a0c613cfe5af01e"},
-    {file = "mini_arcade_core-0.10.0.tar.gz", hash = "sha256:07801cae60fa4e21251b97144c65597a3a284b5781862a373d4a557aa270a209"},
+    {file = "mini_arcade_core-1.0.0-py3-none-any.whl", hash = "sha256:16ec8b11e6c6c7c6fc414d872d03934f2f7df01b5ffaf8515af98ab081507b07"},
+    {file = "mini_arcade_core-1.0.0.tar.gz", hash = "sha256:3565073c6f3896a9a23b347745d33ddb374b2cb19b6a4001c31a31f66690923e"},
 ]
 
 [package.dependencies]
@@ -534,20 +534,20 @@ dev = ["black (>=24.10,<25.0)", "isort (>=5.13,<6.0)", "mypy (>=1.5,<2.0)", "pyl
 
 [[package]]
 name = "mini-arcade-native-backend"
-version = "0.4.6"
+version = "0.5.0"
 description = "Native SDL2 backend for mini-arcade-core using SDL2 + pybind11."
 optional = false
 python-versions = "<3.12,>=3.9"
 groups = ["main"]
 files = [
-    {file = "mini_arcade_native_backend-0.4.6-cp310-cp310-win_amd64.whl", hash = "sha256:6fa345868ebddc55c587ab4bd09d86a3622c7ba5a857f6498eac654dfab32ba3"},
-    {file = "mini_arcade_native_backend-0.4.6-cp311-cp311-win_amd64.whl", hash = "sha256:b3867fa50333f57e4a173ab44176a0db2378653aa366adbf1919eae32d387ca5"},
-    {file = "mini_arcade_native_backend-0.4.6-cp39-cp39-win_amd64.whl", hash = "sha256:91023facebd2bb0c197c2fe43f3a99141d788e2b74c9f2e2eaebb2717acb06e6"},
-    {file = "mini_arcade_native_backend-0.4.6.tar.gz", hash = "sha256:6e5ba3e63565925230e7a980f86b1fff7e9eef0c843fa92cc02223d7d440db93"},
+    {file = "mini_arcade_native_backend-0.5.0-cp310-cp310-win_amd64.whl", hash = "sha256:2cabd2a142a71b6cb35763b3dc1397033993db67132ff67ce0cc7aeaf627897e"},
+    {file = "mini_arcade_native_backend-0.5.0-cp311-cp311-win_amd64.whl", hash = "sha256:d1234ea912999c76de3c8a9ae8e31629822d3d0e3fe725c8a5a9fd28ab7e9e67"},
+    {file = "mini_arcade_native_backend-0.5.0-cp39-cp39-win_amd64.whl", hash = "sha256:cce79d54d042265c9d54876d791d98a6e31c616e96d1ed4c84317827925dbbcd"},
+    {file = "mini_arcade_native_backend-0.5.0.tar.gz", hash = "sha256:5fd1fc5328e6c45686915a2fbf0a5ed8a38130947ff9ead9f555c202939ce0e0"},
 ]
 
 [package.dependencies]
-mini-arcade-core = ">=0.10,<1.0"
+mini-arcade-core = ">=1.0,<2.0"
 
 [package.extras]
 dev = ["black (>=24.10,<25.0)", "isort (>=5.13,<6.0)", "mypy (>=1.5,<2.0)", "pylint (>=3.3,<4.0)", "pytest (>=8.3,<9.0)", "pytest-cov (>=6.0,<7.0)"]
@@ -1010,4 +1010,4 @@ dev = ["black", "isort", "mypy", "pylint", "pytest", "pytest-cov"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.9,<3.12"
-content-hash = "0892fa0bf93d37311c501b96fb2bedf887c0650252b65a708eff27d76de49a7e"
+content-hash = "fde85bdb8c34c2369e58dda4e8a62d33470e9801c69a43bf3d98756c7654f5c0"
