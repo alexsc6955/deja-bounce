@@ -32,7 +32,9 @@ def run():
     - Sets up the game window with specified dimensions and background color.
     - Runs the game with the initial scene set to "menu".
     """
-    registry = SceneRegistry(_factories={}).discover("deja_bounce.scenes")
+    registry = SceneRegistry(_factories={}).discover(
+        "mini_arcade_core.scenes", "deja_bounce.scenes"
+    )
 
     font_path = ASSETS_ROOT / "fonts" / "deja_vu_dive" / "Deja-vu_dive.ttf"
     sounds = {
