@@ -19,7 +19,7 @@ jobs:
     with:
       project-name: "deja-bounce"
       lint-path: "src/deja_bounce"
-      apt-deps: "libsdl2-dev libsdl2-ttf-dev"
+      apt-deps: "libsdl2-dev libsdl2-ttf-dev libsdl2-mixer-dev"
     secrets:
       SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
       SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}

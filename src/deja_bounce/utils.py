@@ -7,10 +7,6 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-# --------------------------------------------------------------------------------------
-# Assets
-# --------------------------------------------------------------------------------------
-
 
 def find_assets_root() -> Path:
     """Return the path to the `assets` directory.

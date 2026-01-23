@@ -6,6 +6,28 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-01-23
+
+### Added
+- Add sounds
+
+### Changed
+- Clean up app.py and constants.py, adjust window size and remove unused comments in utils.py
+
+### Other
+- Merge branch 'release/1.3' of github.com:alexsc6955/deja-bounce into release/1.3
+
+## [1.3.0] - 2026-01-22
+
+### Changed
+- Update mini-arcade-core and mini-arcade-native-backend dependencies to latest versions
+- Simplify import statements in ball.py for clarity
+- Change Pong scene and menu systems to implement new mini-arcade-core architecture
+- update scene management to use services for scene transitions
+
+### Other
+- Merge release/1.2 into develop
+
 ## [1.2.4] - 2025-12-29
 
 - Internal changes only.
