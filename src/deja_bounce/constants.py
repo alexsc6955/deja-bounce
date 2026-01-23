@@ -10,7 +10,7 @@ ASSETS_ROOT = find_assets_root()
 ROOT = ASSETS_ROOT.parent
 
 FPS = 60
-WINDOW_SIZE = (700, 500)
+WINDOW_SIZE = (360, 640)
 PADDLE_SIZE = (10, 100)
 
 # Colors

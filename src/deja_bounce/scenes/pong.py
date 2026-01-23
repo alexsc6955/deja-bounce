@@ -26,7 +26,7 @@ from mini_arcade_core.spaces.d2.boundaries2d import VerticalBounce
 from mini_arcade_core.spaces.d2.geometry2d import Bounds2D, Position2D, Size2D
 from mini_arcade_core.spaces.d2.physics2d import Velocity2D
 
-from deja_bounce.constants import PADDLE_SIZE, ROOT
+from deja_bounce.constants import PADDLE_SIZE
 from deja_bounce.controllers.cpu import CpuPaddleController
 from deja_bounce.difficulty import DIFFICULTY_PRESETS
 from deja_bounce.entities.ball import Ball
@@ -623,7 +623,10 @@ class PongScene(SimScene):
             clear_buffer_on_match=True,
         )
         # Initialize world, paddles, ball, etc.
-        vw, vh = self.context.services.window.size
+        # Justification: window typer is protocol, mypy can't infer correctly
+        # pylint: disable=assignment-from-no-return
+        vw, vh = self.context.services.window.get_virtual_size()
+        # pylint: enable=assignment-from-no-return
         pad_w, pad_h = PADDLE_SIZE
 
         self.world = PongWorld(
