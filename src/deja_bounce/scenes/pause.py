@@ -41,4 +41,6 @@ class PauseScene(BaseMenuScene):
 
     def menu_viewport(self) -> Size2D:
         # pause overlay should cover the real window
+        # Justification: Port does not contain size getter defined in interface
+        # pylint: disable=no-member
         return self.context.services.window.size
