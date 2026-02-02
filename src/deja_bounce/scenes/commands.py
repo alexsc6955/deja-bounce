@@ -25,7 +25,7 @@ class StartGameCommand(Command):
         self,
         context: CommandContext,
     ):
-        context.services.scenes.change("pong")
+        context.managers.scenes.change("pong")
 
 
 class CycleDifficultyCommand(Command):
@@ -49,7 +49,7 @@ class PauseGameCommand(Command):
     """
 
     def execute(self, context: CommandContext):
-        context.services.scenes.push("pause", as_overlay=True)
+        context.managers.scenes.push("pause", as_overlay=True)
 
 
 class GodModeCommand(Command):
@@ -147,4 +147,4 @@ class BackToMenuCommand(Command):
     """
 
     def execute(self, context: CommandContext):
-        context.services.scenes.change("menu")
+        context.managers.scenes.change("menu")

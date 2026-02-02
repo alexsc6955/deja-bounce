@@ -18,10 +18,10 @@ from mini_arcade_core.runtime.services import RuntimeServices
 from mini_arcade_core.scenes.autoreg import (  # pyright: ignore[reportMissingImports]
     register_scene,
 )
-from mini_arcade_core.scenes.systems.system_pipeline import SystemPipeline
-from mini_arcade_core.sim.protocols import (  # pyright: ignore[reportMissingImports]
+from mini_arcade_core.scenes.sim_scene import (  # pyright: ignore[reportMissingImports]
     SimScene,
 )
+from mini_arcade_core.scenes.systems.system_pipeline import SystemPipeline
 from mini_arcade_core.spaces.d2.boundaries2d import VerticalBounce
 from mini_arcade_core.spaces.d2.geometry2d import Bounds2D, Position2D, Size2D
 from mini_arcade_core.spaces.d2.physics2d import Velocity2D
@@ -518,7 +518,7 @@ class PongRenderSystem:
 
             y = 0
             while y < vh:
-                surface.draw_rect(
+                surface.render.draw_rect(
                     x, int(y), dash_w, dash_h, color=(200, 200, 200)
                 )
                 y += dash_h + gap
@@ -526,21 +526,21 @@ class PongRenderSystem:
         def draw_left_paddle(surface: Backend):
             lx, ly = ctx.world.left_paddle.position.to_tuple()
             lw, lh = ctx.world.left_paddle.size.to_tuple()
-            surface.draw_rect(
+            surface.render.draw_rect(
                 int(lx), int(ly), int(lw), int(lh), color=(255, 255, 255)
             )
 
         def draw_right_paddle(surface: Backend):
             rx, ry = ctx.world.right_paddle.position.to_tuple()
             rw, rh = ctx.world.right_paddle.size.to_tuple()
-            surface.draw_rect(
+            surface.render.draw_rect(
                 int(rx), int(ry), int(rw), int(rh), color=(255, 255, 255)
             )
 
         def draw_ball(surface: Backend):
             bx, by = ctx.world.ball.position.to_tuple()
             bw, bh = ctx.world.ball.size.to_tuple()
-            surface.draw_rect(
+            surface.render.draw_rect(
                 int(bx), int(by), int(bw), int(bh), color=(255, 255, 255)
             )
 
@@ -551,7 +551,7 @@ class PongRenderSystem:
             right_text = str(ctx.world.score.right)
 
             # measure pixel width of each score
-            left_w, _ = surface.measure_text(left_text)
+            left_w, _ = surface.text.measure(left_text)
 
             center_x = vw // 2
             gap = 40  # distance from center line to each score
@@ -562,8 +562,8 @@ class PongRenderSystem:
             # right score: left-aligned to the right side of center
             right_x = center_x + gap
 
-            surface.draw_text(left_x, 20, left_text, color=(200, 200, 200))
-            surface.draw_text(right_x, 20, right_text, color=(200, 200, 200))
+            surface.text.draw(left_x, 20, left_text, color=(200, 200, 200))
+            surface.text.draw(right_x, 20, right_text, color=(200, 200, 200))
 
         def draw_trail(surface: Backend):
             if not ctx.world.trail_mode:
@@ -577,7 +577,7 @@ class PongRenderSystem:
             for i, (x, y) in enumerate(ctx.world.trail):
                 t = (i + 1) / count  # 0..1
                 alpha = t * 0.5  # max 50%
-                surface.draw_rect(
+                surface.render.draw_rect(
                     int(x),
                     int(y),
                     size,
