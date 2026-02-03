@@ -6,6 +6,7 @@ Provides a menu to continue or return to the main menu.
 from __future__ import annotations
 
 from mini_arcade_core.scenes.autoreg import register_scene
+from mini_arcade_core.spaces.d2.geometry2d import Size2D
 from mini_arcade_core.ui.menu import BaseMenuScene, MenuItem, MenuStyle
 
 from deja_bounce.scenes.commands import BackToMenuCommand, ContinueCommand
@@ -37,3 +38,9 @@ class PauseScene(BaseMenuScene):
                 BackToMenuCommand,
             ),
         ]
+
+    def menu_viewport(self) -> Size2D:
+        # pause overlay should cover the real window
+        # Justification: Port does not contain size getter defined in interface
+        # pylint: disable=no-member
+        return self.context.services.window.size
