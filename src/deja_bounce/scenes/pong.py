@@ -10,7 +10,13 @@ from typing import Deque, Optional
 
 from mini_arcade_core.backend import Backend
 from mini_arcade_core.backend.keys import Key
-from mini_arcade_core.engine.commands import CommandQueue
+from mini_arcade_core.engine.commands import (
+    CommandQueue,
+    StartReplayPlayCommand,
+    StartReplayRecordCommand,
+    StopReplayPlayCommand,
+    StopReplayRecordCommand,
+)
 from mini_arcade_core.engine.render.packet import RenderPacket
 from mini_arcade_core.runtime.context import RuntimeContext
 from mini_arcade_core.runtime.input_frame import InputFrame
@@ -114,6 +120,8 @@ class PongIntent:
     toggle_slow_mo: bool = False
     toggle_trail: bool = False
     screenshot: bool = False
+    replay_recording: bool = False
+    play_replay: bool = False
 
 
 @dataclass
@@ -169,7 +177,9 @@ class PongInputSystem:
             pause=Key.ESCAPE in ctx.input_frame.keys_pressed,
             toggle_slow_mo=Key.S in ctx.input_frame.keys_pressed,
             toggle_trail=Key.T in ctx.input_frame.keys_pressed,
-            screenshot=Key.F12 in ctx.input_frame.keys_pressed,
+            screenshot=Key.F9 in ctx.input_frame.keys_pressed,
+            replay_recording=Key.F10 in ctx.input_frame.keys_pressed,
+            play_replay=Key.F11 in ctx.input_frame.keys_pressed,
         )
 
 
@@ -177,6 +187,7 @@ class PongInputSystem:
 class PongHotkeysSystem:
     """Handles one-shot hotkeys (trail toggle, screenshot, etc.)."""
 
+    services: RuntimeServices
     name: str = "pong_hotkeys"
     order: int = 13  # after pause (12) or right after input (10/11)
 
@@ -190,6 +201,38 @@ class PongHotkeysSystem:
 
         if ctx.intent.screenshot:
             ctx.commands.push(ScreenshotCommand(label="pong"))
+
+        cap = self.services.capture
+
+        # --- Replay record toggle (F10) ---
+        if ctx.intent.replay_recording:
+            if cap.replay_recording:
+                ctx.commands.push(StopReplayRecordCommand())
+            else:
+                # optionally: if playing, stop play first
+                if cap.replay_playing:
+                    ctx.commands.push(StopReplayPlayCommand())
+
+                ctx.commands.push(
+                    StartReplayRecordCommand(
+                        "pong_replay.marc",
+                        game_id="deja_bounce",
+                        initial_scene="pong",
+                    )
+                )
+
+        # --- Replay play toggle (F11) ---
+        if ctx.intent.play_replay:
+            if cap.replay_playing:
+                ctx.commands.push(StopReplayPlayCommand())
+            else:
+                # optionally: if recording, stop record first
+                if cap.replay_recording:
+                    ctx.commands.push(StopReplayRecordCommand())
+
+                ctx.commands.push(
+                    StartReplayPlayCommand(path="pong_replay.marc")
+                )
 
 
 # TODO: This is not implemented in the scene yet
@@ -666,7 +709,7 @@ class PongScene(SimScene):
             [
                 PongInputSystem(),
                 PongPauseSystem(),
-                PongHotkeysSystem(),
+                PongHotkeysSystem(self.context.services),
                 PongTimeScaleSystem(),
                 CpuIntentSystem(controller=cpu_controller),
                 PaddleSystem(),
