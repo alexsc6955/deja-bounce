@@ -6,6 +6,16 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-01-23
+
+### Fixed
+- update mini-arcade-core and mini-arcade-native-backend dependencies to latest versions add: new screenshot of the game
+- Update scene discovery to include mini_arcade_core and adjust window size
+
+### Other
+- Merge release/1.3 into develop
+- Merge branch 'release/1.3' of github.com:alexsc6955/deja-bounce into release/1.3
+
 ## [1.3.1] - 2026-01-23
 
 ### Added
