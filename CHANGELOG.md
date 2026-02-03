@@ -6,6 +6,19 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-02-03
+
+### Fixed
+- update mini-arcade-native-backend dependency to version 1.0
+- add justification comments for menu_viewport method in PauseScene
+
+### Changed
+- update scene management and rendering methods for improved clarity and functionality
+
+### Other
+- Merge release/1.4 into develop
+- Merge branch 'release/1.4' of github.com:alexsc6955/deja-bounce into release/1.4
+
 ## [1.4.0] - 2026-01-23
 
 ### Fixed
