@@ -6,6 +6,11 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-02-03
+
+### Added
+- add replay functionality with hotkeys and update .gitignore
+
 ## [1.5.0] - 2026-02-03
 
 ### Fixed
