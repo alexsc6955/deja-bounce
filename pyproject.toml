@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "deja-bounce"
-version = "1.4.0"
+version = "1.5.0"
 description = "A minimalist Pong-like game with CPU opponent, built on mini-arcade-core"
 authors = [{ name = "Santiago Rincon", email = "rincores@gmail.com" }]
 readme = "README.md"
