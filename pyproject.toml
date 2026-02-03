@@ -12,7 +12,7 @@ requires-python = ">=3.9,<3.12"
 license = { file = "LICENSE" }
 dependencies = [
   "mini-arcade-core~=1.1",
-  "mini-arcade-native-backend~=0.6",
+  "mini-arcade-native-backend~=1.0",
 ]
 
 [project.optional-dependencies]
