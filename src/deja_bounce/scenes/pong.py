@@ -99,9 +99,6 @@ class PongWorld:
     )
 
 
-# pylint: enable=too-many-instance-attributes
-
-
 @dataclass(frozen=True)
 class PongIntent:
     """
@@ -122,6 +119,9 @@ class PongIntent:
     screenshot: bool = False
     replay_recording: bool = False
     play_replay: bool = False
+
+
+# pylint: enable=too-many-instance-attributes
 
 
 @dataclass
