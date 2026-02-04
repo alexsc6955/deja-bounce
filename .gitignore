@@ -124,3 +124,4 @@ venv.bak/
 dmypy.json
 
 replays/
+recordings/

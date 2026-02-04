@@ -14,8 +14,10 @@ from mini_arcade_core.engine.commands import (
     CommandQueue,
     StartReplayPlayCommand,
     StartReplayRecordCommand,
+    StartVideoRecordCommand,
     StopReplayPlayCommand,
     StopReplayRecordCommand,
+    StopVideoRecordCommand,
 )
 from mini_arcade_core.engine.render.packet import RenderPacket
 from mini_arcade_core.runtime.context import RuntimeContext
@@ -119,6 +121,7 @@ class PongIntent:
     screenshot: bool = False
     replay_recording: bool = False
     play_replay: bool = False
+    video_recording: bool = False
 
 
 # pylint: enable=too-many-instance-attributes
@@ -180,6 +183,7 @@ class PongInputSystem:
             screenshot=Key.F9 in ctx.input_frame.keys_pressed,
             replay_recording=Key.F10 in ctx.input_frame.keys_pressed,
             play_replay=Key.F11 in ctx.input_frame.keys_pressed,
+            video_recording=Key.F12 in ctx.input_frame.keys_pressed,
         )
 
 
@@ -191,7 +195,7 @@ class PongHotkeysSystem:
     name: str = "pong_hotkeys"
     order: int = 13  # after pause (12) or right after input (10/11)
 
-    def step(self, ctx: PongTickContext):
+    def step(self, ctx: PongTickContext):  # pylint: disable=too-many-branches
         """Execute hotkey commands based on intent."""
         if ctx.intent is None:
             return
@@ -233,6 +237,12 @@ class PongHotkeysSystem:
                 ctx.commands.push(
                     StartReplayPlayCommand(path="pong_replay.marc")
                 )
+
+        if ctx.intent.video_recording:
+            if cap.video_recording:
+                ctx.commands.push(StopVideoRecordCommand())
+            else:
+                ctx.commands.push(StartVideoRecordCommand())
 
 
 # TODO: This is not implemented in the scene yet
