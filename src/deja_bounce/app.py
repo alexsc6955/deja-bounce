@@ -14,12 +14,8 @@ from mini_arcade_core.utils import logger
 # Justification: in editable installs, this module is provided by the package.
 # pylint: disable=no-name-in-module
 from mini_arcade_native_backend import (  # pyright: ignore[reportMissingImports]
-    AudioSettings,
-    BackendSettings,
-    FontSettings,
     NativeBackend,
-    RendererSettings,
-    WindowSettings,
+    NativeBackendSettings,
 )
 
 from deja_bounce.constants import ASSETS_ROOT, FPS, WINDOW_SIZE
@@ -47,20 +43,24 @@ def run():
     }
 
     w_width, w_height = WINDOW_SIZE
-    backend_settings = BackendSettings(
-        window=WindowSettings(
-            width=w_width,
-            height=w_height,
-            title="Deja Bounce (Native SDL2 + mini-arcade-core)",
-            high_dpi=False,
-        ),
-        renderer=RendererSettings(background_color=(30, 30, 30)),
-        fonts=[FontSettings(name="default", path=str(font_path), size=24)],
-        audio=AudioSettings(
-            enable=True,
-            sounds=sounds,
-        ),
-    )
+
+    # NOTE: The reason we´re changing this to be a dictionary is to
+    # add yaml-based and/or cli arguments-based configuration in the future.
+    settings_data = {
+        "window": {
+            "width": w_width,
+            "height": w_height,
+            "title": "Deja Bounce (Native SDL2 + mini-arcade-core)",
+            "high_dpi": False,
+        },
+        "renderer": {"background_color": (30, 30, 30)},
+        "fonts": [{"name": "default", "path": str(font_path), "size": 24}],
+        "audio": {
+            "enable": True,
+            "sounds": sounds,
+        },
+    }
+    backend_settings = NativeBackendSettings.from_dict(settings_data)
     backend = NativeBackend(settings=backend_settings)
 
     game_config = GameConfig(
