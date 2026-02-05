@@ -6,6 +6,17 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.5.3] - 2026-02-05
+
+### Added
+- add video recording functionality with hotkey support
+
+### Changed
+- replace backend settings initialization with dictionary-based configuration
+
+### Other
+- Merge branch 'release/1.5' of github.com:alexsc6955/deja-bounce into release/1.5
+
 ## [1.5.2] - 2026-02-04
 
 ### Added
