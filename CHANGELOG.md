@@ -6,6 +6,16 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.5.4] - 2026-02-06
+
+### Changed
+- enhance Pong scene structure with drawable classes and context improvements
+- replace backend settings initialization with dictionary-based configuration
+
+### Other
+- Merge branch 'release/1.5' of github.com:alexsc6955/deja-bounce into release/1.5
+- Merge branch 'release/1.5' of github.com:alexsc6955/deja-bounce into release/1.5
+
 ## [1.5.3] - 2026-02-05
 
 ### Added
