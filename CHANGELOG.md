@@ -6,6 +6,50 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.5.4] - 2026-02-06
+
+### Changed
+- enhance Pong scene structure with drawable classes and context improvements
+- replace backend settings initialization with dictionary-based configuration
+
+### Other
+- Merge branch 'release/1.5' of github.com:alexsc6955/deja-bounce into release/1.5
+- Merge branch 'release/1.5' of github.com:alexsc6955/deja-bounce into release/1.5
+
+## [1.5.3] - 2026-02-05
+
+### Added
+- add video recording functionality with hotkey support
+
+### Changed
+- replace backend settings initialization with dictionary-based configuration
+
+### Other
+- Merge branch 'release/1.5' of github.com:alexsc6955/deja-bounce into release/1.5
+
+## [1.5.2] - 2026-02-04
+
+### Added
+- add video recording functionality with hotkey support
+
+## [1.5.1] - 2026-02-03
+
+### Added
+- add replay functionality with hotkeys and update .gitignore
+
+## [1.5.0] - 2026-02-03
+
+### Fixed
+- update mini-arcade-native-backend dependency to version 1.0
+- add justification comments for menu_viewport method in PauseScene
+
+### Changed
+- update scene management and rendering methods for improved clarity and functionality
+
+### Other
+- Merge release/1.4 into develop
+- Merge branch 'release/1.4' of github.com:alexsc6955/deja-bounce into release/1.4
+
 ## [1.4.0] - 2026-01-23
 
 ### Fixed
