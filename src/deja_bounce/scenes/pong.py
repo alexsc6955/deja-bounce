@@ -6,12 +6,18 @@ from __future__ import annotations
 
 from collections import deque
 from dataclasses import dataclass, field
-from typing import Deque, Optional
+from typing import Deque
 
 from mini_arcade_core.backend import Backend
 from mini_arcade_core.backend.keys import Key
-from mini_arcade_core.engine.commands import CommandQueue
-from mini_arcade_core.engine.render.packet import RenderPacket
+from mini_arcade_core.engine.commands import (
+    StartReplayPlayCommand,
+    StartReplayRecordCommand,
+    StartVideoRecordCommand,
+    StopReplayPlayCommand,
+    StopReplayRecordCommand,
+    StopVideoRecordCommand,
+)
 from mini_arcade_core.runtime.context import RuntimeContext
 from mini_arcade_core.runtime.input_frame import InputFrame
 from mini_arcade_core.runtime.services import RuntimeServices
@@ -19,7 +25,16 @@ from mini_arcade_core.scenes.autoreg import (  # pyright: ignore[reportMissingIm
     register_scene,
 )
 from mini_arcade_core.scenes.sim_scene import (  # pyright: ignore[reportMissingImports]
+    BaseIntent,
+    BaseTickContext,
+    BaseWorld,
+    Drawable,
+    DrawCall,
     SimScene,
+)
+from mini_arcade_core.scenes.systems.builtins import (
+    BaseInputSystem,
+    BaseRenderSystem,
 )
 from mini_arcade_core.scenes.systems.system_pipeline import SystemPipeline
 from mini_arcade_core.spaces.d2.boundaries2d import VerticalBounce
@@ -57,7 +72,7 @@ class ScoreState:
 # Justification: many attributes needed for world state
 # pylint: disable=too-many-instance-attributes
 @dataclass
-class PongWorld:
+class PongWorld(BaseWorld):
     """
     Pong world state.
 
@@ -93,11 +108,8 @@ class PongWorld:
     )
 
 
-# pylint: enable=too-many-instance-attributes
-
-
 @dataclass(frozen=True)
-class PongIntent:
+class PongIntent(BaseIntent):
     """
     Player intent for the Pong scene.
 
@@ -114,10 +126,16 @@ class PongIntent:
     toggle_slow_mo: bool = False
     toggle_trail: bool = False
     screenshot: bool = False
+    replay_recording: bool = False
+    play_replay: bool = False
+    video_recording: bool = False
+
+
+# pylint: enable=too-many-instance-attributes
 
 
 @dataclass
-class PongTickContext:
+class PongTickContext(BaseTickContext[PongWorld, PongIntent]):
     """
     Context for a Pong scene tick.
 
@@ -131,24 +149,14 @@ class PongTickContext:
     :ivar packet (Optional[RenderPacket]): Render packet for this tick.
     """
 
-    input_frame: InputFrame
-    dt: float
-
-    world: PongWorld
-    commands: CommandQueue
-
-    intent: Optional[PongIntent] = None
-    packet: Optional[RenderPacket] = None
-
 
 @dataclass
-class PongInputSystem:
+class PongInputSystem(BaseInputSystem):
     """
     Process input and update intent.
     """
 
     name: str = "pong_input"
-    order: int = 10
 
     def step(self, ctx: PongTickContext):
         """Process input and update intent."""
@@ -169,7 +177,10 @@ class PongInputSystem:
             pause=Key.ESCAPE in ctx.input_frame.keys_pressed,
             toggle_slow_mo=Key.S in ctx.input_frame.keys_pressed,
             toggle_trail=Key.T in ctx.input_frame.keys_pressed,
-            screenshot=Key.F12 in ctx.input_frame.keys_pressed,
+            screenshot=Key.F9 in ctx.input_frame.keys_pressed,
+            replay_recording=Key.F10 in ctx.input_frame.keys_pressed,
+            play_replay=Key.F11 in ctx.input_frame.keys_pressed,
+            video_recording=Key.F12 in ctx.input_frame.keys_pressed,
         )
 
 
@@ -177,10 +188,11 @@ class PongInputSystem:
 class PongHotkeysSystem:
     """Handles one-shot hotkeys (trail toggle, screenshot, etc.)."""
 
+    services: RuntimeServices
     name: str = "pong_hotkeys"
     order: int = 13  # after pause (12) or right after input (10/11)
 
-    def step(self, ctx: PongTickContext):
+    def step(self, ctx: PongTickContext):  # pylint: disable=too-many-branches
         """Execute hotkey commands based on intent."""
         if ctx.intent is None:
             return
@@ -190,6 +202,44 @@ class PongHotkeysSystem:
 
         if ctx.intent.screenshot:
             ctx.commands.push(ScreenshotCommand(label="pong"))
+
+        cap = self.services.capture
+
+        # --- Replay record toggle (F10) ---
+        if ctx.intent.replay_recording:
+            if cap.replay_recording:
+                ctx.commands.push(StopReplayRecordCommand())
+            else:
+                # optionally: if playing, stop play first
+                if cap.replay_playing:
+                    ctx.commands.push(StopReplayPlayCommand())
+
+                ctx.commands.push(
+                    StartReplayRecordCommand(
+                        "pong_replay.marc",
+                        game_id="deja_bounce",
+                        initial_scene="pong",
+                    )
+                )
+
+        # --- Replay play toggle (F11) ---
+        if ctx.intent.play_replay:
+            if cap.replay_playing:
+                ctx.commands.push(StopReplayPlayCommand())
+            else:
+                # optionally: if recording, stop record first
+                if cap.replay_recording:
+                    ctx.commands.push(StopReplayRecordCommand())
+
+                ctx.commands.push(
+                    StartReplayPlayCommand(path="pong_replay.marc")
+                )
+
+        if ctx.intent.video_recording:
+            if cap.video_recording:
+                ctx.commands.push(StopVideoRecordCommand())
+            else:
+                ctx.commands.push(StartVideoRecordCommand())
 
 
 # TODO: This is not implemented in the scene yet
@@ -496,8 +546,121 @@ class PongRulesSystem:
             ctx.world.ball.velocity = Velocity2D(-250.0, -200.0)
 
 
+class DrawCenterLine(Drawable[PongTickContext]):
+    """
+    Drawable to render the center dashed line.
+    """
+
+    def draw(self, backend: Backend, ctx: PongTickContext):
+        vw, vh = ctx.world.viewport
+
+        x = int(vw / 2) - 2  # center line X (2px thickness)
+        dash_w = 4
+        dash_h = 16
+        gap = 12
+
+        y = 0
+        while y < vh:
+            backend.render.draw_rect(
+                x, int(y), dash_w, dash_h, color=(200, 200, 200)
+            )
+            y += dash_h + gap
+
+
+class DrawLeftPaddle(Drawable[PongTickContext]):
+    """
+    Drawable to render the left paddle.
+    """
+
+    def draw(self, backend: Backend, ctx: PongTickContext):
+        lx, ly = ctx.world.left_paddle.position.to_tuple()
+        lw, lh = ctx.world.left_paddle.size.to_tuple()
+        backend.render.draw_rect(
+            int(lx), int(ly), int(lw), int(lh), color=(255, 255, 255)
+        )
+
+
+class DrawRightPaddle(Drawable[PongTickContext]):
+    """
+    Drawable to render the right paddle.
+    """
+
+    def draw(self, backend: Backend, ctx: PongTickContext):
+        rx, ry = ctx.world.right_paddle.position.to_tuple()
+        rw, rh = ctx.world.right_paddle.size.to_tuple()
+        backend.render.draw_rect(
+            int(rx), int(ry), int(rw), int(rh), color=(255, 255, 255)
+        )
+
+
+class DrawBall(Drawable[PongTickContext]):
+    """
+    Drawable to render the ball.
+    """
+
+    def draw(self, backend: Backend, ctx: PongTickContext):
+        bx, by = ctx.world.ball.position.to_tuple()
+        bw, bh = ctx.world.ball.size.to_tuple()
+        backend.render.draw_rect(
+            int(bx), int(by), int(bw), int(bh), color=(255, 255, 255)
+        )
+
+
+class DrawScore(Drawable[PongTickContext]):
+    """
+    Drawable to render the score.
+    """
+
+    def draw(self, backend: Backend, ctx: PongTickContext):
+        vw, _ = ctx.world.viewport
+
+        left_text = str(ctx.world.score.left)
+        right_text = str(ctx.world.score.right)
+
+        # measure pixel width of each score
+        left_w, _ = backend.text.measure(left_text)
+
+        center_x = vw // 2
+        gap = 40  # distance from center line to each score
+
+        # left score: right-aligned to the left side of center
+        left_x = (center_x - gap) - left_w
+
+        # right score: left-aligned to the right side of center
+        right_x = center_x + gap
+
+        backend.text.draw(left_x, 20, left_text, color=(200, 200, 200))
+        backend.text.draw(right_x, 20, right_text, color=(200, 200, 200))
+
+
+class DrawTrail(Drawable[PongTickContext]):
+    """
+    Drawable to render the ball trail.
+    """
+
+    def draw(self, backend: Backend, ctx: PongTickContext):
+        if not ctx.world.trail_mode:
+            return
+
+        count = len(ctx.world.trail)
+        if count == 0:
+            return
+
+        size = 10  # match ball size
+        for i, (x, y) in enumerate(ctx.world.trail):
+            t = (i + 1) / count  # 0..1
+            alpha = t * 0.5  # max 50%
+            backend.render.draw_rect(
+                int(x),
+                int(y),
+                size,
+                size,
+                color=(255, 255, 255, alpha),
+            )
+
+
 @dataclass
-class PongRenderSystem:
+class PongRenderSystem(BaseRenderSystem):
     """
     Render the Pong world.
     """
@@ -508,97 +671,19 @@ class PongRenderSystem:
     def step(self, ctx: PongTickContext):
         """Render the Pong world."""
 
-        def draw_center_line(surface: Backend):
-            vw, vh = ctx.world.viewport
-
-            x = int(vw / 2) - 2  # center line X (2px thickness)
-            dash_w = 4
-            dash_h = 16
-            gap = 12
-
-            y = 0
-            while y < vh:
-                surface.render.draw_rect(
-                    x, int(y), dash_w, dash_h, color=(200, 200, 200)
-                )
-                y += dash_h + gap
-
-        def draw_left_paddle(surface: Backend):
-            lx, ly = ctx.world.left_paddle.position.to_tuple()
-            lw, lh = ctx.world.left_paddle.size.to_tuple()
-            surface.render.draw_rect(
-                int(lx), int(ly), int(lw), int(lh), color=(255, 255, 255)
-            )
-
-        def draw_right_paddle(surface: Backend):
-            rx, ry = ctx.world.right_paddle.position.to_tuple()
-            rw, rh = ctx.world.right_paddle.size.to_tuple()
-            surface.render.draw_rect(
-                int(rx), int(ry), int(rw), int(rh), color=(255, 255, 255)
-            )
-
-        def draw_ball(surface: Backend):
-            bx, by = ctx.world.ball.position.to_tuple()
-            bw, bh = ctx.world.ball.size.to_tuple()
-            surface.render.draw_rect(
-                int(bx), int(by), int(bw), int(bh), color=(255, 255, 255)
-            )
-
-        def draw_score(surface: Backend):
-            vw, _ = ctx.world.viewport
-
-            left_text = str(ctx.world.score.left)
-            right_text = str(ctx.world.score.right)
-
-            # measure pixel width of each score
-            left_w, _ = surface.text.measure(left_text)
-
-            center_x = vw // 2
-            gap = 40  # distance from center line to each score
-
-            # left score: right-aligned to the left side of center
-            left_x = (center_x - gap) - left_w
-
-            # right score: left-aligned to the right side of center
-            right_x = center_x + gap
-
-            surface.text.draw(left_x, 20, left_text, color=(200, 200, 200))
-            surface.text.draw(right_x, 20, right_text, color=(200, 200, 200))
-
-        def draw_trail(surface: Backend):
-            if not ctx.world.trail_mode:
-                return
-
-            count = len(ctx.world.trail)
-            if count == 0:
-                return
-
-            size = 10  # match ball size
-            for i, (x, y) in enumerate(ctx.world.trail):
-                t = (i + 1) / count  # 0..1
-                alpha = t * 0.5  # max 50%
-                surface.render.draw_rect(
-                    int(x),
-                    int(y),
-                    size,
-                    size,
-                    color=(255, 255, 255, alpha),
-                )
-
-        ctx.packet = RenderPacket.from_ops(
-            [
-                draw_center_line,
-                draw_left_paddle,
-                draw_right_paddle,
-                draw_trail,
-                draw_ball,
-                draw_score,
-            ]
-        )
+        ctx.draw_ops = [
+            DrawCall(drawable=DrawCenterLine(), ctx=ctx),
+            DrawCall(drawable=DrawLeftPaddle(), ctx=ctx),
+            DrawCall(drawable=DrawRightPaddle(), ctx=ctx),
+            DrawCall(drawable=DrawTrail(), ctx=ctx),
+            DrawCall(drawable=DrawBall(), ctx=ctx),
+            DrawCall(drawable=DrawScore(), ctx=ctx),
+        ]
+        super().step(ctx)
 
 
 @register_scene("pong")
-class PongScene(SimScene):
+class PongScene(SimScene[PongTickContext]):
     """
     Minimal scene: opens a window, clears screen, handles quit/ESC.
     """
@@ -666,7 +751,7 @@ class PongScene(SimScene):
             [
                 PongInputSystem(),
                 PongPauseSystem(),
-                PongHotkeysSystem(),
+                PongHotkeysSystem(self.context.services),
                 PongTimeScaleSystem(),
                 CpuIntentSystem(controller=cpu_controller),
                 PaddleSystem(),
@@ -678,12 +763,12 @@ class PongScene(SimScene):
             ]
         )
 
-    def tick(self, input_frame: InputFrame, dt: float) -> RenderPacket:
-        ctx = PongTickContext(
+    def _get_tick_context(
+        self, input_frame: InputFrame, dt: float
+    ) -> PongTickContext:
+        return PongTickContext(
             input_frame=input_frame,
             dt=dt,
             world=self.world,
             commands=self.context.command_queue,
         )
-        self.systems.step(ctx)
-        return ctx.packet
