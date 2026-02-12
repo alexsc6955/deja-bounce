@@ -72,3 +72,8 @@ include = [
 
 [project.scripts]
 deja-bounce = "deja_bounce.app:run"
+
+[tool.mini-arcade.game]
+id = "deja-bounce"
+entrypoint = "manage.py"
+source_roots = ["src"]
