@@ -683,15 +683,12 @@ class PongRenderSystem(BaseRenderSystem):
 
 
 @register_scene("pong")
-class PongScene(SimScene[PongTickContext]):
+class PongScene(SimScene[PongTickContext, PongWorld]):
     """
     Minimal scene: opens a window, clears screen, handles quit/ESC.
     """
 
-    def __init__(self, ctx: RuntimeContext):
-        super().__init__(ctx)
-        self.systems = SystemPipeline[PongTickContext]()
-        self.world: PongWorld
+    tick_context_type = PongTickContext
 
     def on_enter(self):
         # Add cheats
@@ -761,14 +758,4 @@ class PongScene(SimScene[PongTickContext]):
                 PongRulesSystem(),
                 PongRenderSystem(),
             ]
-        )
-
-    def _get_tick_context(
-        self, input_frame: InputFrame, dt: float
-    ) -> PongTickContext:
-        return PongTickContext(
-            input_frame=input_frame,
-            dt=dt,
-            world=self.world,
-            commands=self.context.command_queue,
         )
