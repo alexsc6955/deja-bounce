@@ -26,8 +26,8 @@ from mini_arcade_core.scenes.sim_scene import (  # pyright: ignore[reportMissing
     SimScene,
 )
 from mini_arcade_core.scenes.systems.builtins import (
-    BaseInputSystem,
     BaseRenderSystem,
+    InputIntentSystem,
 )
 from mini_arcade_core.spaces.d2.boundaries2d import VerticalBounce
 from mini_arcade_core.spaces.d2.geometry2d import Bounds2D, Position2D, Size2D
@@ -54,14 +54,14 @@ from deja_bounce.scenes.pong.models import (
 
 
 @dataclass
-class PongInputSystem(BaseInputSystem):
+class PongInputSystem(InputIntentSystem):
     """
     Process input and update intent.
     """
 
     name: str = "pong_input"
 
-    def step(self, ctx: PongTickContext):
+    def build_intent(self, ctx: PongTickContext):
         """Process input and update intent."""
         down = ctx.input_frame.keys_down
 
@@ -74,7 +74,7 @@ class PongInputSystem(BaseInputSystem):
             1.0 if Key.UP in down else 0.0
         )
 
-        ctx.intent = PongIntent(
+        return PongIntent(
             move_left_paddle=left,
             move_right_paddle=right,
             pause=Key.ESCAPE in ctx.input_frame.keys_pressed,
