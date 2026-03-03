@@ -7,21 +7,18 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from mini_arcade_core.backend.keys import Key
-from mini_arcade_core.engine.commands import (
-    StartReplayPlayCommand,
-    StartReplayRecordCommand,
-    StartVideoRecordCommand,
-    StopReplayPlayCommand,
-    StopReplayRecordCommand,
-    StopVideoRecordCommand,
-)
 from mini_arcade_core.runtime.services import RuntimeServices
 from mini_arcade_core.scenes.sim_scene import (
     DrawCall,
 )
 from mini_arcade_core.scenes.systems.builtins import (
+    ActionIntentSystem,
+    ActionMap,
+    AxisActionBinding,
     BaseQueuedRenderSystem,
-    InputIntentSystem,
+    CaptureHotkeysConfig,
+    CaptureHotkeysSystem,
+    DigitalActionBinding,
 )
 from mini_arcade_core.spaces.collision.intersections import intersects_entities
 from mini_arcade_core.spaces.d2.boundaries2d import VerticalBounce
@@ -33,7 +30,6 @@ from deja_bounce.controllers.cpu import CpuPaddleController
 from deja_bounce.entities import Ball, EntityId, Paddle
 from deja_bounce.scenes.commands import (
     PauseGameCommand,
-    ScreenshotCommand,
     ToggleSlowMoCommand,
     ToggleTrailCommand,
 )
@@ -44,38 +40,47 @@ from deja_bounce.scenes.pong.models import (
 )
 
 
-@dataclass
-class PongInputSystem(InputIntentSystem):
+PONG_ACTIONS = ActionMap(
+    bindings={
+        "move_left_paddle": AxisActionBinding(
+            positive_keys=(Key.S,),
+            negative_keys=(Key.W,),
+        ),
+        "move_right_paddle": AxisActionBinding(
+            positive_keys=(Key.DOWN,),
+            negative_keys=(Key.UP,),
+        ),
+        "pause": DigitalActionBinding(keys=(Key.ESCAPE,)),
+        "toggle_slow_mo": DigitalActionBinding(keys=(Key.F8,)),
+        "toggle_trail": DigitalActionBinding(keys=(Key.T,)),
+        "capture_screenshot": DigitalActionBinding(keys=(Key.F9,)),
+        "capture_toggle_replay_record": DigitalActionBinding(keys=(Key.F10,)),
+        "capture_toggle_replay_play": DigitalActionBinding(keys=(Key.F11,)),
+        "capture_toggle_video": DigitalActionBinding(keys=(Key.F12,)),
+    }
+)
+
+
+def _build_pong_intent(actions, _ctx: PongTickContext) -> PongIntent:
+    return PongIntent(
+        move_left_paddle=actions.value("move_left_paddle"),
+        move_right_paddle=actions.value("move_right_paddle"),
+        pause=actions.pressed("pause"),
+        toggle_slow_mo=actions.pressed("toggle_slow_mo"),
+        toggle_trail=actions.pressed("toggle_trail"),
+    )
+
+
+class PongInputSystem(ActionIntentSystem[PongTickContext, PongIntent]):
     """
-    Process input and update intent.
+    Build intent from an action map instead of raw device keys.
     """
 
-    name: str = "pong_input"
-
-    def build_intent(self, ctx: PongTickContext):
-        """Process input and update intent."""
-        down = ctx.input_frame.keys_down
-
-        # left paddle: W/S
-        left = (1.0 if Key.S in down else 0.0) - (
-            1.0 if Key.W in down else 0.0
-        )
-        # right paddle: UP/DOWN
-        right = (1.0 if Key.DOWN in down else 0.0) - (
-            1.0 if Key.UP in down else 0.0
-        )
-
-        return PongIntent(
-            move_left_paddle=left,
-            move_right_paddle=right,
-            pause=Key.ESCAPE in ctx.input_frame.keys_pressed,
-            # use a non-movement key for slow-mo toggle
-            toggle_slow_mo=Key.F8 in ctx.input_frame.keys_pressed,
-            toggle_trail=Key.T in ctx.input_frame.keys_pressed,
-            screenshot=Key.F9 in ctx.input_frame.keys_pressed,
-            replay_recording=Key.F10 in ctx.input_frame.keys_pressed,
-            play_replay=Key.F11 in ctx.input_frame.keys_pressed,
-            video_recording=Key.F12 in ctx.input_frame.keys_pressed,
+    def __init__(self):
+        super().__init__(
+            action_map=PONG_ACTIONS,
+            intent_factory=_build_pong_intent,
+            name="pong_input",
         )
 
 
@@ -83,7 +88,6 @@ class PongInputSystem(InputIntentSystem):
 class PongHotkeysSystem:
     """Handles one-shot hotkeys (trail toggle, screenshot, etc.)."""
 
-    services: RuntimeServices
     name: str = "pong_hotkeys"
     order: int = 13  # after pause (12) or right after input (10/11)
 
@@ -95,61 +99,31 @@ class PongHotkeysSystem:
         if ctx.intent.toggle_slow_mo:
             ctx.commands.push(ToggleSlowMoCommand())
 
-    def _take_screenshot(self, ctx: PongTickContext):
-        if ctx.intent.screenshot:
-            ctx.commands.push(ScreenshotCommand(label="pong"))
-
-    def _handle_replay_recording(self, ctx: PongTickContext):
-        cap = self.services.capture
-        if ctx.intent.replay_recording:
-            if cap.replay_recording:
-                ctx.commands.push(StopReplayRecordCommand())
-            else:
-                # optionally: if playing, stop play first
-                if cap.replay_playing:
-                    ctx.commands.push(StopReplayPlayCommand())
-
-                ctx.commands.push(
-                    StartReplayRecordCommand(
-                        "pong_replay.marc",
-                        game_id="deja_bounce",
-                        initial_scene="pong",
-                    )
-                )
-
-    def _handle_replay_play(self, ctx: PongTickContext):
-        cap = self.services.capture
-        if ctx.intent.play_replay:
-            if cap.replay_playing:
-                ctx.commands.push(StopReplayPlayCommand())
-            else:
-                # optionally: if recording, stop record first
-                if cap.replay_recording:
-                    ctx.commands.push(StopReplayRecordCommand())
-
-                ctx.commands.push(
-                    StartReplayPlayCommand(path="pong_replay.marc")
-                )
-
-    def _handle_video_recording(self, ctx: PongTickContext):
-        cap = self.services.capture
-        if ctx.intent.video_recording:
-            if cap.video_recording:
-                ctx.commands.push(StopVideoRecordCommand())
-            else:
-                ctx.commands.push(StartVideoRecordCommand())
-
-    def step(self, ctx: PongTickContext):  # pylint: disable=too-many-branches
+    def step(self, ctx: PongTickContext):
         """Execute hotkey commands based on intent."""
         if ctx.intent is None:
             return
 
         self._toggle_trail(ctx)
         self._toggle_slow_mo(ctx)
-        self._take_screenshot(ctx)
-        self._handle_replay_recording(ctx)
-        self._handle_replay_play(ctx)
-        self._handle_video_recording(ctx)
+
+
+def build_pong_capture_hotkeys_system(
+    services: RuntimeServices,
+) -> CaptureHotkeysSystem:
+    """
+    Shared capture bindings for Pong.
+    """
+    return CaptureHotkeysSystem(
+        services=services,
+        action_map=PONG_ACTIONS,
+        cfg=CaptureHotkeysConfig(
+            screenshot_label="pong",
+            replay_file="pong_replay.marc",
+            replay_game_id="deja_bounce",
+            replay_initial_scene="pong",
+        ),
+    )
 
 
 # TODO: This is not implemented in the scene yet

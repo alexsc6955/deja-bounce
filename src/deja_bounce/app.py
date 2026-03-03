@@ -67,6 +67,7 @@ def run():
         initial_scene="pong",
         fps=FPS,
         backend=backend,
+        virtual_resolution=WINDOW_SIZE,
     )
     logger.info("Starting Deja Bounce...")
     run_game(game_config=game_config, scene_registry=scene_registry)

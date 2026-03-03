@@ -27,6 +27,7 @@ from deja_bounce.scenes.pong.systems import (
     CpuIntentSystem,
     PaddleSystem,
     PongCollisionSystem,
+    build_pong_capture_hotkeys_system,
     PongHotkeysSystem,
     PongInputSystem,
     PongPauseSystem,
@@ -107,7 +108,8 @@ class PongScene(SimScene[PongTickContext, PongWorld]):
             [
                 PongInputSystem(),
                 PongPauseSystem(),
-                PongHotkeysSystem(self.context.services),
+                PongHotkeysSystem(),
+                build_pong_capture_hotkeys_system(self.context.services),
                 PongTimeScaleSystem(),
                 CpuIntentSystem(controller=cpu_controller),
                 PaddleSystem(),
