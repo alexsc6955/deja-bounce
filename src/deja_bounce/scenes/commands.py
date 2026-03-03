@@ -7,6 +7,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal
 
 from mini_arcade_core.engine.commands import Command, CommandContext
+from mini_arcade_core.spaces.math.vec2 import Vec2
 from mini_arcade_core.utils import logger
 
 from deja_bounce.difficulty import DIFFICULTY_PRESETS
@@ -131,12 +132,42 @@ class ContinueCommand(Command):
             world.paused = False
             logger.info("Resuming game from pause")
 
-            if world.saved_ball_vel is not None:
-                world.ball.velocity = world.saved_ball_vel
-            if world.saved_left_vel is not None:
-                world.left_paddle.velocity = world.saved_left_vel
-            if world.saved_right_vel is not None:
-                world.right_paddle.velocity = world.saved_right_vel
+            # Restore saved velocities for refactored entity-based Pong world.
+            try:
+                from deja_bounce.entities import EntityId
+
+                ball = world.get_entity_by_id(EntityId.BALL)
+                left = world.get_entity_by_id(EntityId.LEFT_PADDLE)
+                right = world.get_entity_by_id(EntityId.RIGHT_PADDLE)
+
+                if (
+                    ball is not None
+                    and ball.kinematic is not None
+                    and world.saved_ball_vel is not None
+                ):
+                    ball.kinematic.velocity = Vec2(
+                        world.saved_ball_vel.vx, world.saved_ball_vel.vy
+                    )
+
+                if (
+                    left is not None
+                    and left.kinematic is not None
+                    and world.saved_left_vel is not None
+                ):
+                    left.kinematic.velocity = Vec2(
+                        world.saved_left_vel.vx, world.saved_left_vel.vy
+                    )
+
+                if (
+                    right is not None
+                    and right.kinematic is not None
+                    and world.saved_right_vel is not None
+                ):
+                    right.kinematic.velocity = Vec2(
+                        world.saved_right_vel.vx, world.saved_right_vel.vy
+                    )
+            except Exception:  # noqa: BLE001 - keep pause resume resilient
+                logger.exception("Failed to restore saved velocities on resume")
 
         context.services.scenes.pop()
 

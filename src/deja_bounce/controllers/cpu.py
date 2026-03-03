@@ -62,7 +62,7 @@ class CpuPaddleController:
         self.config = config or CpuConfig()
 
         # Make sure paddle speed matches CPU config so movement feels consistent
-        self.paddle.speed = self.config.max_speed
+        self.paddle.kinematic.max_speed = self.config.max_speed
         self._aim_offset_y = self._new_offset()
 
     def _new_offset(self) -> float:
@@ -77,7 +77,7 @@ class CpuPaddleController:
             0.0 = stop
             +1.0 = down
         """
-        vx = self.ball.velocity.vx
+        vx = self.ball.kinematic.velocity.x
 
         # React only when ball is moving toward this paddle
         if self.side == "RIGHT" and vx <= 0:
@@ -87,12 +87,13 @@ class CpuPaddleController:
 
         # Side-correct X distance check
         if self.side == "RIGHT":
-            distance_x = self.paddle.position.x - (
-                self.ball.position.x + self.ball.size.width
+            distance_x = self.paddle.transform.center.x - (
+                self.ball.transform.center.x + self.ball.transform.size.width
             )
         else:
-            distance_x = self.ball.position.x - (
-                self.paddle.position.x + self.paddle.size.width
+            distance_x = self.ball.transform.center.x - (
+                self.paddle.transform.center.x
+                + self.paddle.transform.size.width
             )
 
         # Too far away? don't react
@@ -101,11 +102,14 @@ class CpuPaddleController:
 
         # Aim with error
         ball_center_y = (
-            self.ball.position.y
-            + self.ball.size.height / 2
+            self.ball.transform.center.y
+            + self.ball.transform.size.height / 2
             + self._aim_offset_y
         )
-        paddle_center_y = self.paddle.position.y + self.paddle.size.height / 2
+        paddle_center_y = (
+            self.paddle.transform.center.y
+            + self.paddle.transform.size.height / 2
+        )
         diff = ball_center_y - paddle_center_y
 
         # Dead zone = "human jitter reduction"

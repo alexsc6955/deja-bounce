@@ -4,30 +4,45 @@ Ball entity for the Pong scene.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import random
 
-from mini_arcade_core.spaces.d2.collision2d import RectCollider
-from mini_arcade_core.spaces.d2.geometry2d import Position2D, Size2D
-from mini_arcade_core.spaces.d2.physics2d import Velocity2D
+from mini_arcade_core.engine.entities import BaseEntity
+
+from deja_bounce.entities.entity_id import EntityId
 
 
-@dataclass
-class Ball:
+class Ball(BaseEntity):
     """
     Ball entity for the Pong scene.
-
-    :ivar position (Position2D): Position of the ball.
-    :ivar size (Size2D): Size of the ball.
-    :ivar velocity (Velocity2D): Velocity of the ball.
-    :ivar speed (float): Speed of the ball.
     """
 
-    position: Position2D
-    size: Size2D
-    velocity: Velocity2D
-    speed: float = 400.0
-
-    @property
-    def collider(self) -> RectCollider:
-        """Collider for the ball."""
-        return RectCollider(self.position, self.size)
+    @staticmethod
+    def build(entity_id: EntityId, name: str, vw: float, vh: float) -> Ball:
+        """Build a new Ball entity."""
+        bw, bh = 10.0, 10.0
+        vx = 250.0 * random.choice((-1.0, 1.0))
+        vy = 200.0 * random.choice((-1.0, 1.0))
+        return Ball.from_dict(
+            {
+                "id": entity_id,
+                "name": name,
+                "transform": {
+                    "center": {"x": vw / 2 - bw / 2, "y": vh / 2 - bh / 2},
+                    "size": {"width": bw, "height": bh},
+                },
+                "shape": {
+                    "kind": "rect",
+                },
+                "collider": {
+                    "kind": "rect",
+                },
+                "kinematic": {
+                    "velocity": {"vx": vx, "vy": vy},
+                    "acceleration": {"ax": 0.0, "ay": 0.0},
+                    "max_speed": 0.0,
+                },
+                "style": {
+                    "fill": (255, 255, 255, 255),
+                },
+            }
+        )

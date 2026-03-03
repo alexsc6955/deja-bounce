@@ -64,7 +64,7 @@ def run():
     backend = NativeBackend(settings=backend_settings)
 
     game_config = GameConfig(
-        initial_scene="menu",
+        initial_scene="pong",
         fps=FPS,
         backend=backend,
     )

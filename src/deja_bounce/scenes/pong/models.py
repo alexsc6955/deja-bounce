@@ -8,15 +8,12 @@ from collections import deque
 from dataclasses import dataclass, field
 from typing import Deque
 
-from mini_arcade_core.scenes.sim_scene import (  # pyright: ignore[reportMissingImports]
+from mini_arcade_core.scenes.sim_scene import (
     BaseIntent,
     BaseTickContext,
     BaseWorld,
 )
 from mini_arcade_core.spaces.d2.physics2d import Velocity2D
-
-from deja_bounce.entities.ball import Ball
-from deja_bounce.entities.paddle import Paddle
 
 
 @dataclass
@@ -47,10 +44,7 @@ class PongWorld(BaseWorld):
     """
 
     viewport: tuple[float, float]
-    left_paddle: Paddle
-    right_paddle: Paddle
-    ball: Ball
-    score: ScoreState
+    score: ScoreState = field(default_factory=ScoreState)
     paused: bool = False
 
     # snapshot to restore after pause
