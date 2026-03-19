@@ -4,23 +4,12 @@ Minimal main application for Deja Bounce.
 
 from __future__ import annotations
 
-from mini_arcade_core import (  # pyright: ignore[reportMissingImports]
-    GameConfig,
-    SceneRegistry,
-    run_game,
-)
+import json
+
+from mini_arcade.modules.backend_loader import BackendLoader
+from mini_arcade.modules.settings import Settings
+from mini_arcade_core import run_game  # pyright: ignore[reportMissingImports]
 from mini_arcade_core.utils import logger
-
-# Justification: in editable installs, this module is provided by the package.
-# pylint: disable=no-name-in-module
-from mini_arcade_native_backend import (  # pyright: ignore[reportMissingImports]
-    NativeBackend,
-    NativeBackendSettings,
-)
-
-from deja_bounce.constants import ASSETS_ROOT, FPS, WINDOW_SIZE
-
-# pylint: enable=no-name-in-module
 
 
 def run():
@@ -28,49 +17,40 @@ def run():
     Main entry point for DejaBounce.
 
     - Auto-discovers scenes from the `deja_bounce.scenes` package.
-    - Configures the native backend with the Deja Vu Dive font.
+    - Configures the backend fonts so the title keeps the Deja Vu Dive face.
     - Sets up the game window with specified dimensions and background color.
     - Runs the game with the initial scene set to "menu".
     """
-    scene_registry = SceneRegistry(_factories={}).discover(
-        "deja_bounce.scenes", "mini_arcade_core.scenes"
-    )
+    settings = Settings.for_game("deja-bounce", required=True)
+    backend_cfg = settings.backend_defaults(
+        resolve_paths=True
+    )  # resolved absolute paths
+    backend = BackendLoader.load_backend(backend_cfg)
 
-    font_path = ASSETS_ROOT / "fonts" / "deja_vu_dive" / "Deja-vu_dive.ttf"
-    sounds = {
-        "paddle_hit": str(ASSETS_ROOT / "sfx" / "paddle_hit.wav"),
-        "wall_hit": str(ASSETS_ROOT / "sfx" / "wall_hit.wav"),
-    }
+    logger.info(f"Loaded backend: {backend.__class__.__name__}")
 
-    w_width, w_height = WINDOW_SIZE
+    engine_cfg = settings.engine_config_defaults()
+    scene_cfg = settings.scene_defaults()
+    gameplay_cfg = settings.gameplay_defaults()
 
-    # NOTE: The reason we´re changing this to be a dictionary is to
-    # add yaml-based and/or cli arguments-based configuration in the future.
-    settings_data = {
-        "window": {
-            "width": w_width,
-            "height": w_height,
-            "title": "Deja Bounce (Native SDL2 + mini-arcade-core)",
-            "high_dpi": False,
-        },
-        "renderer": {"background_color": (30, 30, 30)},
-        "fonts": [{"name": "default", "path": str(font_path), "size": 24}],
-        "audio": {
-            "enable": True,
-            "sounds": sounds,
-        },
-    }
-    backend_settings = NativeBackendSettings.from_dict(settings_data)
-    backend = NativeBackend(settings=backend_settings)
-
-    game_config = GameConfig(
-        initial_scene="pong",
-        fps=FPS,
-        backend=backend,
-        virtual_resolution=WINDOW_SIZE,
+    logger.debug(
+        json.dumps(
+            {
+                "engine_config": engine_cfg,
+                "scene_config": scene_cfg,
+                "gameplay_config": gameplay_cfg,
+                "backend_config": backend_cfg,
+            },
+            indent=4,
+        )
     )
     logger.info("Starting Deja Bounce...")
-    run_game(game_config=game_config, scene_registry=scene_registry)
+    run_game(
+        engine_config=engine_cfg,
+        scene_config=scene_cfg,
+        backend=backend,
+        gameplay_config=gameplay_cfg,
+    )
 
 
 if __name__ == "__main__":

@@ -1,263 +1,26 @@
-name: Publish Deja Bounce to itch.io from Release Branch
+﻿name: Publish Deja Bounce to itch.io
 
 on:
+  push:
+    tags:
+      - "deja-bounce-v*"
   workflow_dispatch:
     inputs:
-      release_branch:
-        description: "Release branch name (e.g. release/1.0)"
+      tag:
+        description: "Tag to publish (e.g. deja-bounce-v1.6.0)"
         required: true
         type: string
-      version_file:
-        description: "Path to the version file"
-        required: false
-        type: string
-        default: "pyproject.toml"
       channel:
-        description: "itch.io channel (e.g. windows, windows-beta)"
-        required: true
+        description: "itch.io channel"
+        required: false
         type: string
         default: "windows"
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  # Step 1: bump version / changelog / tag (Ubuntu, like your PyPI workflow)
-  bump-and-tag:
-    runs-on: ubuntu-latest
-
-    outputs:
-      version: ${{ steps.bump_and_tag.outputs.version }}
-      tag: ${{ steps.bump_and_tag.outputs.tag }}
-      changelog_section: ${{ steps.bump_and_tag.outputs.changelog_section }}
-
-    steps:
-      - name: Validate release branch name
-        run: |
-          if [[ "${{ inputs.release_branch }}" != release/* ]]; then
-            echo "ERROR: You can only publish from release/* branches."
-            exit 1
-          fi
-
-      - name: Checkout release branch
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.release_branch }}
-          fetch-depth: 0
-
-      - name: Configure git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-      - name: Install jq (for changelog JSON formatting)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y jq
-
-      - name: Bump patch if needed, update changelog, create tag
-        id: bump_and_tag
-        env:
-          VERSION_FILE: ${{ inputs.version_file }}
-        run: |
-          set -e
-
-          python - << 'PY'
-          from pathlib import Path
-          from datetime import date
-          import subprocess
-          import re
-          import os
-
-          version_file = os.environ.get("VERSION_FILE", "pyproject.toml")
-
-          # --- Version bump logic ---
-          vf = Path(version_file)
-          text = vf.read_text(encoding="utf-8")
-
-          m = re.search(r'^version\s*=\s*"(?P<ver>\d+\.\d+\.\d+)"', text, re.MULTILINE)
-          if not m:
-              raise SystemExit(f"Could not find version in {version_file}")
-
-          current_version = m.group("ver")
-          major, minor, patch = map(int, current_version.split("."))
-          current_tag = f"v{current_version}"
-
-          # Get all tags
-          tags = subprocess.check_output(["git", "tag"], text=True).splitlines()
-
-          if current_tag in tags:
-              # Tag already exists -> bump patch
-              patch += 1
-              new_version = f"{major}.{minor}.{patch}"
-
-              print(f"Current version {current_version} already tagged; bumping to {new_version}")
-
-              new_text = re.sub(
-                  r'^version\s*=\s*"\d+\.\d+\.\d+"',
-                  f'version = "{new_version}"',
-                  text,
-                  count=1,
-                  flags=re.MULTILINE,
-              )
-              vf.write_text(new_text, encoding="utf-8")
-              version_to_tag = new_version
-          else:
-              # First publish from this branch -> use current version
-              print(f"Using current version {current_version} for first publish.")
-              version_to_tag = current_version
-
-          # --- Prepare / read existing CHANGELOG.md ---
-          changelog = Path("CHANGELOG.md")
-          if changelog.exists():
-              old = changelog.read_text(encoding="utf-8")
-          else:
-              old = (
-                  "# Changelog\n\n"
-                  "All notable changes to this project will be documented in this file.\n\n"
-                  "This project adheres to [Semantic Versioning](https://semver.org/).\n\n"
-                  "## [Unreleased]\n\n"
-              )
-
-          # --- Compute git log range ---
-          try:
-              prev_tag = subprocess.check_output(
-                  ["git", "describe", "--tags", "--abbrev=0", "--match", "v*.*.*", "HEAD^"],
-                  text=True,
-              ).strip()
-          except subprocess.CalledProcessError:
-              prev_tag = None
-
-          if prev_tag:
-              log_range = f"{prev_tag}..HEAD"
-          else:
-              log_range = "HEAD"
-
-          # Get commit subjects (no bullets, we’ll format them)
-          raw_log = subprocess.check_output(
-              ["git", "log", log_range, "--pretty=format:%s"],
-              text=True,
-          )
-          lines = [l.strip() for l in raw_log.splitlines() if l.strip()]
-
-          # --- Group commits by type ---
-          type_to_section = {
-              "feat": "Added",
-              "fix": "Fixed",
-              "refactor": "Changed",
-              "refactore": "Changed",  # typo-friendly
-          }
-
-          sections = {
-              "Added": [],
-              "Fixed": [],
-              "Changed": [],
-          }
-          other = []
-
-          for subj in lines:
-              lower = subj.lower()
-              prefix, sep, rest = lower.partition(":")
-
-              if sep:  # "type: message"
-                  commit_type = prefix.strip()
-                  message = subj.split(":", 1)[1].strip() or subj
-              else:
-                  commit_type = ""
-                  message = subj
-
-              # Ignore chores
-              if commit_type == "chore":
-                  continue
-
-              heading = type_to_section.get(commit_type)
-              if heading:
-                  sections[heading].append(f"- {message}")
-              else:
-                  other.append(f"- {subj}")
-
-          today = date.today().isoformat()
-          header = f"## [{version_to_tag}] - {today}"
-
-          if not any(sections.values()) and not other:
-              body = "- Internal changes only."
-          else:
-              parts = []
-              for heading in ("Added", "Fixed", "Changed"):
-                  items = sections[heading]
-                  if items:
-                      parts.append(f"### {heading}")
-                      parts.extend(items)
-                      parts.append("")
-              if other:
-                  parts.append("### Other")
-                  parts.extend(other)
-                  parts.append("")
-              body = "\n".join(parts).strip()
-
-          new_section = f"{header}\n\n{body}\n\n"
-
-          text = old
-
-          # --- Insert new section under [Unreleased] ---
-          import re as _re
-          unreleased_match = _re.search(r"^## \[Unreleased\].*$", text, flags=_re.MULTILINE)
-          if unreleased_match:
-              start_after_unrel = unreleased_match.end()
-              rest = text[start_after_unrel:]
-              next_header = _re.search(r"^## \[.*\]", rest, flags=_re.MULTILINE)
-              if next_header:
-                  insert_pos = start_after_unrel + next_header.start()
-              else:
-                  insert_pos = len(text)
-          else:
-              insert_pos = len(text.rstrip())
-
-          before = text[:insert_pos].rstrip("\n")
-          after = text[insert_pos:].lstrip("\n")
-          new_changelog = before + "\n\n" + new_section + after
-
-          changelog.write_text(new_changelog, encoding="utf-8")
-
-          # Persist values for shell steps
-          Path(".version_to_tag").write_text(version_to_tag, encoding="utf-8")
-          Path(".changelog_section").write_text(new_section, encoding="utf-8")
-          PY
-
-          VERSION_TO_TAG=$(cat .version_to_tag)
-          TAG="v${VERSION_TO_TAG}"
-
-          echo "Version to tag: ${VERSION_TO_TAG}"
-          echo "Tag: ${TAG}"
-
-          CHANGELOG_SECTION_JSON=$(cat .changelog_section | jq -Rs .)
-          echo "version=${VERSION_TO_TAG}" >> "$GITHUB_OUTPUT"
-          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
-          echo "changelog_section=${CHANGELOG_SECTION_JSON}" >> "$GITHUB_OUTPUT"
-
-          git status
-          git add "${VERSION_FILE}" CHANGELOG.md || true
-
-          # Commit only if there are changes (e.g. patch bump / changelog)
-          if ! git diff --cached --quiet; then
-            git commit -m "chore: release ${VERSION_TO_TAG}"
-            git push origin "${{ inputs.release_branch }}"
-          else
-            echo "No changes to commit."
-          fi
-
-          # Create & push tag
-          if git rev-parse "${TAG}" >/dev/null 2>&1; then
-            echo "Tag ${TAG} already exists; aborting."
-            exit 1
-          fi
-
-          git tag "${TAG}"
-          git push origin "${TAG}"
-
-  # Step 2: build Windows exe and push to itch.io (Windows runner)
   build-and-publish:
-    needs: [bump-and-tag]
     runs-on: windows-latest
 
     env:
@@ -266,10 +29,36 @@ jobs:
       BUILD_DIR: "dist"
 
     steps:
-      - name: Checkout tagged version
+      - name: Resolve tag and version
+        id: release
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || '' }}
+        run: |
+          set -e
+
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            tag="$INPUT_TAG"
+          else
+            tag="$REF_NAME"
+          fi
+
+          if [[ ! "$tag" =~ ^deja-bounce-v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid tag format: $tag"
+            exit 1
+          fi
+
+          version="${tag#deja-bounce-v}"
+
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout tagged release
         uses: actions/checkout@v4
         with:
-          ref: v${{ needs.bump-and-tag.outputs.version }}
+          ref: ${{ steps.release.outputs.tag }}
           fetch-depth: 0
 
       - name: Set up Python
@@ -283,58 +72,54 @@ jobs:
           pip install .
           pip install pyinstaller
 
-      - name: Guard
+      - name: Guard imports
         run: |
           python -c "import deja_bounce.scenes; print('OK: scenes importable')"
 
-      # NOTE: onedir build (better for Defender + easier to debug)
       - name: Build Windows EXE with PyInstaller
         run: pyinstaller --onedir --name "$env:GAME_NAME" --paths "src" --collect-submodules deja_bounce.scenes --collect-submodules mini_arcade_native_backend --collect-binaries mini_arcade_native_backend --copy-metadata mini-arcade-core --copy-metadata deja-bounce --add-data "assets;assets" --add-binary "native_dlls\SDL2.dll;." --add-binary "native_dlls\SDL2_ttf.dll;." src\deja_bounce\__main__.py
 
       - name: Package build as ZIP
         run: |
-          $version = "${{ needs.bump-and-tag.outputs.version }}"
+          $version = "${{ steps.release.outputs.version }}"
           $zipName = "$($env:GAME_NAME)-v$version-windows.zip"
 
-          # Staging folder for packaging
           if (Test-Path package) { Remove-Item package -Recurse -Force }
           New-Item -ItemType Directory -Path package | Out-Null
 
-          # Copy built game folder (dist/DejaBounce/...)
           Copy-Item "$env:BUILD_DIR\$env:GAME_NAME\*" "package\" -Recurse
 
-          # Optionally include README / LICENSE
           if (Test-Path README.md) { Copy-Item README.md package\ }
           if (Test-Path LICENSE) { Copy-Item LICENSE package\ }
 
-          Write-Host "Creating ZIP: $zipName"
           if (Test-Path $zipName) { Remove-Item $zipName -Force }
           Compress-Archive -Path "package\*" -DestinationPath $zipName
 
-      - name: Upload build artifact (for manual download / backup)
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.GAME_NAME }}-windows
-          path: "${{ env.GAME_NAME }}-v${{ needs.bump-and-tag.outputs.version }}-windows.zip"
+          path: "${{ env.GAME_NAME }}-v${{ steps.release.outputs.version }}-windows.zip"
 
       - name: Download butler
-        shell: bash
+        shell: pwsh
         run: |
-          curl -L -o butler.zip https://broth.itch.zone/butler/windows-amd64/LATEST/archive/default
-          unzip butler.zip
+          Invoke-WebRequest -Uri "https://broth.itch.zone/butler/windows-amd64/LATEST/archive/default" -OutFile "butler.zip"
+          Expand-Archive -Path "butler.zip" -DestinationPath "." -Force
 
       - name: Publish to itch.io with butler
         env:
           BUTLER_API_KEY: ${{ secrets.ITCH_IO_API_KEY }}
+          CHANNEL_INPUT: ${{ github.event_name == 'workflow_dispatch' && inputs.channel || 'windows' }}
+        shell: pwsh
         run: |
-          $channel = "${{ inputs.channel }}"
+          $channel = "$env:CHANNEL_INPUT"
           if (-not $channel) { $channel = "windows" }
 
-          $version = "${{ needs.bump-and-tag.outputs.version }}"
+          $version = "${{ steps.release.outputs.version }}"
           $zipName = "DejaBounce-v$version-windows.zip"
 
           .\butler.exe push `
             "$zipName" `
             "rincorpes/dejabounce:$channel" `
             --userversion "v$version"
-        shell: powershell

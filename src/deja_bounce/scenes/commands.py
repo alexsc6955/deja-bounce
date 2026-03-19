@@ -6,8 +6,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal
 
-from mini_arcade_core.engine.commands import Command, CommandContext
-from mini_arcade_core.spaces.math.vec2 import Vec2
+from mini_arcade_core.engine.commands import (
+    Command,
+    CommandContext,
+    PushSceneIfMissingCommand,
+    RemoveSceneCommand,
+)
+from mini_arcade_core.engine.scenes.models import ScenePolicy
 from mini_arcade_core.utils import logger
 
 from deja_bounce.difficulty import DIFFICULTY_PRESETS
@@ -33,15 +38,18 @@ class CycleDifficultyCommand(Command):
     """BaseCommand to cycle the game difficulty."""
 
     levels = list(DIFFICULTY_PRESETS.keys())
-    settings: object
 
     def execute(
         self,
         context: CommandContext,
     ):
-        current = context.settings.difficulty
+        difficulty = getattr(context.settings, "difficulty", None)
+        if difficulty is None or not hasattr(difficulty, "level"):
+            return
+
+        current = str(difficulty.level).lower()
         idx = self.levels.index(current) if current in self.levels else 0
-        context.settings.difficulty = self.levels[(idx + 1) % len(self.levels)]
+        difficulty.level = self.levels[(idx + 1) % len(self.levels)]
 
 
 class PauseGameCommand(Command):
@@ -50,7 +58,16 @@ class PauseGameCommand(Command):
     """
 
     def execute(self, context: CommandContext):
-        context.managers.scenes.push("pause", as_overlay=True)
+        PushSceneIfMissingCommand(
+            "pause",
+            as_overlay=True,
+            policy=ScenePolicy(
+                blocks_update=True,
+                blocks_input=True,
+                is_opaque=False,
+                receives_input=True,
+            ),
+        ).execute(context)
 
 
 class GodModeCommand(Command):
@@ -127,49 +144,7 @@ class ContinueCommand(Command):
     """
 
     def execute(self, context: CommandContext):
-        world = context.world
-        if world is not None:
-            world.paused = False
-            logger.info("Resuming game from pause")
-
-            # Restore saved velocities for refactored entity-based Pong world.
-            try:
-                from deja_bounce.entities import EntityId
-
-                ball = world.get_entity_by_id(EntityId.BALL)
-                left = world.get_entity_by_id(EntityId.LEFT_PADDLE)
-                right = world.get_entity_by_id(EntityId.RIGHT_PADDLE)
-
-                if (
-                    ball is not None
-                    and ball.kinematic is not None
-                    and world.saved_ball_vel is not None
-                ):
-                    ball.kinematic.velocity = Vec2(
-                        world.saved_ball_vel.vx, world.saved_ball_vel.vy
-                    )
-
-                if (
-                    left is not None
-                    and left.kinematic is not None
-                    and world.saved_left_vel is not None
-                ):
-                    left.kinematic.velocity = Vec2(
-                        world.saved_left_vel.vx, world.saved_left_vel.vy
-                    )
-
-                if (
-                    right is not None
-                    and right.kinematic is not None
-                    and world.saved_right_vel is not None
-                ):
-                    right.kinematic.velocity = Vec2(
-                        world.saved_right_vel.vx, world.saved_right_vel.vy
-                    )
-            except Exception:  # noqa: BLE001 - keep pause resume resilient
-                logger.exception("Failed to restore saved velocities on resume")
-
-        context.services.scenes.pop()
+        RemoveSceneCommand("pause").execute(context)
 
 
 class BackToMenuCommand(Command):

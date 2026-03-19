@@ -7,13 +7,11 @@ They are used by the PongRenderSystem to build the draw calls for each frame.
 from __future__ import annotations
 
 from mini_arcade_core.backend import Backend
-from mini_arcade_core.scenes.sim_scene import (
-    Drawable,
-)
+from mini_arcade_core.scenes.sim_scene import Drawable
 
-from deja_bounce.scenes.pong.models import (
-    PongTickContext,
-)
+from deja_bounce.scenes.pong.models import PongTickContext
+
+SCORE_FONT_SIZE = 42
 
 
 class DrawScore(Drawable[PongTickContext]):
@@ -28,7 +26,11 @@ class DrawScore(Drawable[PongTickContext]):
         right_text = str(ctx.world.score.right)
 
         # measure pixel width of each score
-        left_w, _ = backend.text.measure(left_text)
+        left_w, _ = backend.text.measure(
+            left_text,
+            font_size=SCORE_FONT_SIZE,
+            font_name="default",
+        )
 
         center_x = vw // 2
         gap = 40  # distance from center line to each score
@@ -39,8 +41,22 @@ class DrawScore(Drawable[PongTickContext]):
         # right score: left-aligned to the right side of center
         right_x = center_x + gap
 
-        backend.text.draw(left_x, 20, left_text, color=(200, 200, 200))
-        backend.text.draw(right_x, 20, right_text, color=(200, 200, 200))
+        backend.text.draw(
+            left_x,
+            20,
+            left_text,
+            color=(200, 200, 200),
+            font_size=SCORE_FONT_SIZE,
+            font_name="default",
+        )
+        backend.text.draw(
+            right_x,
+            20,
+            right_text,
+            color=(200, 200, 200),
+            font_size=SCORE_FONT_SIZE,
+            font_name="default",
+        )
 
 
 class DrawTrail(Drawable[PongTickContext]):

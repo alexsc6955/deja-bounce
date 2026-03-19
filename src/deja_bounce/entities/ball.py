@@ -5,8 +5,10 @@ Ball entity for the Pong scene.
 from __future__ import annotations
 
 import random
+from typing import Any
 
 from mini_arcade_core.engine.entities import BaseEntity
+from mini_arcade_core.scenes.entity_blueprints import build_entity_payload
 
 from deja_bounce.entities.entity_id import EntityId
 
@@ -44,5 +46,38 @@ class Ball(BaseEntity):
                 "style": {
                     "fill": (255, 255, 255, 255),
                 },
+                "tags": ["ball"],
             }
         )
+
+    @staticmethod
+    def build_from_template(
+        entity_id: EntityId,
+        name: str,
+        template: dict[str, Any],
+        *,
+        viewport: tuple[float, float],
+    ) -> "Ball":
+        """Build a ball entity from a template plus runtime overrides."""
+
+        payload = build_entity_payload(
+            template,
+            viewport=viewport,
+            overrides={
+                "id": int(entity_id),
+                "name": name,
+                "tags": ["ball"],
+            },
+        )
+        kinematic = payload.get("kinematic", {}) or {}
+        velocity_choices = kinematic.pop("velocity_choices", {}) or {}
+        x_choices = velocity_choices.get("x", [])
+        y_choices = velocity_choices.get("y", [])
+        velocity = kinematic.get("velocity", {}) or {}
+        if isinstance(x_choices, list) and x_choices:
+            velocity["vx"] = float(random.choice(x_choices))
+        if isinstance(y_choices, list) and y_choices:
+            velocity["vy"] = float(random.choice(y_choices))
+        kinematic["velocity"] = velocity
+        payload["kinematic"] = kinematic
+        return Ball.from_dict(payload)

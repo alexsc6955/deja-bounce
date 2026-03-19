@@ -4,47 +4,102 @@ Minimal Pong-like scene using mini-arcade-core.
 
 from __future__ import annotations
 
-from mini_arcade_core.scenes.autoreg import (
-    register_scene,
+from dataclasses import replace
+
+from mini_arcade.utils.logging import logger
+from mini_arcade_core.scenes.autoreg import register_scene
+from mini_arcade_core.scenes.bootstrap import (
+    scene_entities_config,
+    scene_viewport,
 )
-from mini_arcade_core.scenes.sim_scene import (
-    SimScene,
+from mini_arcade_core.scenes.game_scene import (
+    GameScene,
+    GameSceneSystemsConfig,
 )
 
 from deja_bounce.controllers.cpu import CpuPaddleController
 from deja_bounce.difficulty import DIFFICULTY_PRESETS
-from deja_bounce.entities import Ball, DottedLine, EntityId, Paddle
 from deja_bounce.scenes.commands import (
     GodModeCommand,
+    PauseGameCommand,
     SlowMoCommand,
+    ToggleSlowMoCommand,
+    ToggleTrailCommand,
 )
+from deja_bounce.scenes.pong.bootstrap import build_pong_world
 from deja_bounce.scenes.pong.models import (
+    PongIntent,
     PongTickContext,
     PongWorld,
 )
-from deja_bounce.scenes.pong.systems import (
-    BallMovementSystem,
-    CpuIntentSystem,
-    PaddleSystem,
-    PongCollisionSystem,
-    build_pong_capture_hotkeys_system,
-    PongHotkeysSystem,
-    PongInputSystem,
-    PongPauseSystem,
-    PongRenderSystem,
-    PongRulesSystem,
-    PongTimeScaleSystem,
-    PongTrailCaptureSystem,
-)
+from deja_bounce.scenes.pong.pipeline import build_pong_systems
+from deja_bounce.scenes.pong.systems import PongRenderSystem
+
+
+def _build_pong_intent(actions, _ctx: PongTickContext):
+    return PongIntent(
+        move_left_paddle=actions.value("move_left_paddle"),
+        move_right_paddle=actions.value("move_right_paddle"),
+        pause=actions.pressed("pause"),
+        toggle_slow_mo=actions.pressed("toggle_slow_mo"),
+        toggle_trail=actions.pressed("toggle_trail"),
+    )
 
 
 @register_scene("pong")
-class PongScene(SimScene[PongTickContext, PongWorld]):
+class PongScene(GameScene[PongTickContext, PongWorld]):
     """
     Minimal scene: opens a window, clears screen, handles quit/ESC.
     """
 
     tick_context_type = PongTickContext
+    capture_config = replace(
+        GameScene.capture_config,
+        replay_game_id="deja_bounce",
+    )
+    systems_config = GameSceneSystemsConfig(
+        controls_scene_key="pong",
+        intent_factory=_build_pong_intent,
+        input_system_name="pong_input",
+        pause_command_factory=lambda _ctx: PauseGameCommand(),
+        intent_command_bindings={
+            "toggle_slow_mo": lambda _ctx: ToggleSlowMoCommand(),
+            "toggle_trail": lambda _ctx: ToggleTrailCommand(),
+        },
+        render_system_factory=lambda _runtime: PongRenderSystem(),
+    )
+    _cpu_controller: CpuPaddleController | None = None
+
+    def make_world(self):
+        """Log scene initialization before the world is constructed."""
+
+        logger.info("Initializing Pong world")
+
+    def debug_overlay_lines(self) -> list[str]:
+        ball = self.world.ball()
+        lines = [
+            f"difficulty: {self.context.settings.difficulty.level}",
+            f"score: {self.world.score.left} - {self.world.score.right}",
+            f"slow_mo: {self.world.slow_mo} scale={self.world.slow_mo_scale:.2f}",
+            f"trail: {self.world.trail_mode} samples={len(self.world.trail)}",
+        ]
+        if ball is not None and ball.kinematic is not None:
+            lines.extend(
+                [
+                    "ball:",
+                    (
+                        "  pos="
+                        f"({ball.transform.center.x:.1f},"
+                        f" {ball.transform.center.y:.1f})"
+                    ),
+                    (
+                        "  vel="
+                        f"({ball.kinematic.velocity.x:.1f},"
+                        f" {ball.kinematic.velocity.y:.1f})"
+                    ),
+                ]
+            )
+        return lines
 
     def on_enter(self):
         # Add cheats
@@ -62,61 +117,32 @@ class PongScene(SimScene[PongTickContext, PongWorld]):
         )
 
         # Initialize world, paddles, ball, etc.
-        # Justification: window typer is protocol, mypy can't infer correctly
-        # pylint: disable=assignment-from-no-return
-        vw, vh = self.context.services.window.get_virtual_size()
-        # pylint: enable=assignment-from-no-return
-
-        dotted_center_line = DottedLine.build(
-            EntityId.CENTER_LINE, "Dotted Center Line", vw, vh
+        viewport = scene_viewport(self)
+        entity_cfg = scene_entities_config(
+            self,
+            error_message="Missing gameplay.scenes.pong.entities config",
         )
-        left_paddle = Paddle.build(
-            EntityId.LEFT_PADDLE, "Left Paddle", x=20.0, vh=vh
-        )
-        right_paddle = Paddle.build(
-            EntityId.RIGHT_PADDLE,
-            "Right Paddle",
-            x=vw - Paddle.paddle_size[0] - 20.0,
-            vh=vh,
-        )
-        ball = Ball.build(EntityId.BALL, "Ball", vw, vh)
-
-        self.world = PongWorld(
-            entities=[
-                left_paddle,
-                right_paddle,
-                ball,
-                dotted_center_line,
-            ],
-            viewport=(vw, vh),
+        self.world = build_pong_world(
+            viewport=viewport,
+            entity_cfg=entity_cfg,
         )
 
         # ✅ menu sets ctx.settings.difficulty
-        difficulty = self.context.settings.difficulty.lower()
+        difficulty = self.context.settings.difficulty.level.lower()
         cpu_cfg = DIFFICULTY_PRESETS.get(
             difficulty, DIFFICULTY_PRESETS["normal"]
         )
 
-        cpu_controller = CpuPaddleController(
-            paddle=self.world.get_entity_by_id(EntityId.RIGHT_PADDLE),
-            ball=self.world.get_entity_by_id(EntityId.BALL),
+        self._cpu_controller = CpuPaddleController(
+            paddle=self.world.right_paddle(),
+            ball=self.world.ball(),
             side="RIGHT",
             config=cpu_cfg,
         )
 
         self.systems.extend(
-            [
-                PongInputSystem(),
-                PongPauseSystem(),
-                PongHotkeysSystem(),
-                build_pong_capture_hotkeys_system(self.context.services),
-                PongTimeScaleSystem(),
-                CpuIntentSystem(controller=cpu_controller),
-                PaddleSystem(),
-                BallMovementSystem(),
-                PongTrailCaptureSystem(),
-                PongCollisionSystem(self.context.services),
-                PongRulesSystem(),
-                PongRenderSystem(),
-            ]
+            build_pong_systems(
+                cpu_controller=self._cpu_controller,
+                services=self.context.services,
+            )
         )

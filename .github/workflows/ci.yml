@@ -1,4 +1,4 @@
-name: CI
+﻿name: CI
 
 on:
   push:
@@ -6,7 +6,6 @@ on:
       - main
       - develop
       - "feature/**"
-      - "release/**"
       - "hotfix/**"
   pull_request:
     branches:
@@ -15,12 +14,9 @@ on:
 
 jobs:
   python-ci:
-    uses: trivox-io/trivox-ci/.github/workflows/python-ci.yml@main
+    uses: trivox-io/mini-arcade/.github/workflows/reusable-python-ci.yml@main
     with:
-      project-name: "deja-bounce"
-      lint-path: "src/deja_bounce"
-      apt-deps: "libsdl2-dev libsdl2-ttf-dev libsdl2-mixer-dev"
-    secrets:
-      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-      SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
-
+      project_name: deja-bounce
+      lint_path: src/deja_bounce
+      working_directory: .
+      apt_deps: "libsdl2-dev libsdl2-ttf-dev libsdl2-mixer-dev"

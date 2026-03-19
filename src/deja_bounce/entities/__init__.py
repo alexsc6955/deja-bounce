@@ -7,8 +7,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntEnum
+from typing import Any
 
 from mini_arcade_core.engine.entities import BaseEntity
+from mini_arcade_core.scenes.entity_blueprints import build_entity_payload
 
 from .ball import Ball
 from .entity_id import EntityId
@@ -50,8 +52,40 @@ class DottedLine(BaseEntity):
                         "thickness": thickness,
                     },
                 },
+                "tags": ["center_line", "decoration"],
             }
         )
+
+    @staticmethod
+    def build_from_template(
+        entity_id: EntityId,
+        name: str,
+        template: dict[str, Any],
+        *,
+        viewport: tuple[float, float],
+    ) -> "DottedLine":
+        """Build a center-line entity from a template plus overrides."""
+
+        payload = build_entity_payload(
+            template,
+            viewport=viewport,
+            overrides={
+                "id": int(entity_id),
+                "name": name,
+                "tags": ["center_line", "decoration"],
+            },
+        )
+        height = float(
+            (payload.get("transform", {}) or {})
+            .get("size", {})
+            .get("height", 0.0)
+        )
+        shape = payload.get("shape", {}) or {}
+        if str(shape.get("kind", "")).strip().lower() == "line":
+            shape["a"] = {"x": 0.0, "y": 0.0}
+            shape["b"] = {"x": 0.0, "y": height}
+            payload["shape"] = shape
+        return DottedLine.from_dict(payload)
 
 
 __all__ = [

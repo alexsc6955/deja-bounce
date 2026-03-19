@@ -1,0 +1,190 @@
+# Profile id: deja-bounce
+# Source: games/deja-bounce/src/deja_bounce/app.py
+
+game:
+  id: deja-bounce
+
+project:
+  root: ${settings_dir}/..
+  assets_root: ${project_root}/assets
+
+scene:
+  initial_scene: menu
+  scene_registry:
+    discover_packages:
+      - deja_bounce.scenes
+      - mini_arcade_core.scenes
+
+engine_config:
+  fps: 60
+  virtual_resolution: [800, 600]
+  enable_profiler: false
+  postfx:
+    enabled: false
+    active: []
+
+backend:
+  provider: native
+  window:
+    width: 800
+    height: 600
+    title: Deja Bounce (Native SDL2 + mini-arcade-core)
+    high_dpi: false
+    resizable: true
+  renderer:
+    background_color: [30, 30, 30]
+  fonts:
+    - name: default
+      path: null
+      size: 24
+    - name: title
+      path: ${assets_root}/fonts/deja_vu_dive/Deja-vu_dive.ttf
+      size: 24
+  audio:
+    enable: true
+    sounds:
+      paddle_hit: sfx/paddle_hit.wav
+      wall_hit: sfx/wall_hit.wav
+
+gameplay:
+  difficulty:
+    types:
+      - easy
+      - normal
+      - hard
+      - insane
+    default: normal
+  debug_overlay:
+    enabled: true
+    title: Deja Bounce Debug
+    sections: [timing, render, viewport, effects, stack, scene]
+  scenes:
+    menu:
+      escape:
+        command: quit
+    pause:
+      escape:
+        command: remove_scene
+    pong:
+      entities:
+        center_line:
+          name: Dotted Center Line
+          transform:
+            size:
+              width: 4.0
+              height:
+                relative: 1.0
+            position:
+              x:
+                anchor: center
+              y:
+                anchor: center
+          shape:
+            kind: line
+            dash:
+              length: 16.0
+              gap: 12.0
+          style:
+            stroke:
+              color: [200, 200, 200, 255]
+              thickness: 5.0
+        left_paddle:
+          name: Left Paddle
+          transform:
+            size:
+              width: 20.0
+              height: 100.0
+            position:
+              x:
+                anchor: left
+                offset: 20.0
+              y:
+                anchor: center
+          shape:
+            kind: rect
+          collider:
+            kind: rect
+          kinematic:
+            velocity:
+              vx: 0.0
+              vy: 0.0
+            acceleration:
+              ax: 0.0
+              ay: 0.0
+            max_speed: 300.0
+          style:
+            fill: [255, 255, 255, 255]
+        right_paddle:
+          name: Right Paddle
+          transform:
+            size:
+              width: 20.0
+              height: 100.0
+            position:
+              x:
+                anchor: right
+                offset: 20.0
+              y:
+                anchor: center
+          shape:
+            kind: rect
+          collider:
+            kind: rect
+          kinematic:
+            velocity:
+              vx: 0.0
+              vy: 0.0
+            acceleration:
+              ax: 0.0
+              ay: 0.0
+            max_speed: 300.0
+          style:
+            fill: [255, 255, 255, 255]
+        ball:
+          name: Ball
+          transform:
+            size:
+              width: 10.0
+              height: 10.0
+            position:
+              x:
+                anchor: center
+              y:
+                anchor: center
+          shape:
+            kind: rect
+          collider:
+            kind: rect
+          kinematic:
+            velocity_choices:
+              x: [-250.0, 250.0]
+              y: [-200.0, 200.0]
+            acceleration:
+              ax: 0.0
+              ay: 0.0
+            max_speed: 0.0
+          reset_speed:
+            x: 250.0
+            y: 200.0
+          style:
+            fill: [255, 255, 255, 255]
+  controls:
+    pong:
+      bindings:
+        move_left_paddle:
+          type: axis
+          positive_keys: [S]
+          negative_keys: [W]
+        move_right_paddle:
+          type: axis
+          positive_keys: [DOWN]
+          negative_keys: [UP]
+        pause:
+          type: digital
+          keys: [ESCAPE]
+        toggle_slow_mo:
+          type: digital
+          keys: [F8]
+        toggle_trail:
+          type: digital
+          keys: [T]

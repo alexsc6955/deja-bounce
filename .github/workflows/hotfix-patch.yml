@@ -1,28 +1,24 @@
-﻿name: Release Major/Minor
+﻿name: Hotfix Patch Release
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
-    inputs:
-      bump_type:
-        description: "Version bump type"
-        required: true
-        type: choice
-        options:
-          - minor
-          - major
 
 permissions:
   contents: write
 
 jobs:
-  release:
+  patch-release:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.head_commit.message == '' || !startsWith(github.event.head_commit.message, 'chore(release):') }}
     uses: trivox-io/mini-arcade/.github/workflows/reusable-release-package.yml@main
     with:
       project_name: deja-bounce
       working_directory: .
       version_file: pyproject.toml
-      bump_type: ${{ inputs.bump_type }}
-      merge_develop_into_main: true
+      bump_type: patch
+      merge_develop_into_main: false
       sync_develop_from_main: true
       publish_to_pypi: false
       tag_prefix: deja-bounce

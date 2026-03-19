@@ -12,8 +12,11 @@ from mini_arcade_core.scenes.sim_scene import (
     BaseIntent,
     BaseTickContext,
     BaseWorld,
+    EntityIdDomain,
 )
 from mini_arcade_core.spaces.d2.physics2d import Velocity2D
+
+from deja_bounce.entities.entity_id import EntityId
 
 
 @dataclass
@@ -43,6 +46,24 @@ class PongWorld(BaseWorld):
     :ivar score (ScoreState): Current score state.
     """
 
+    entity_id_domains = {
+        "left_paddle": EntityIdDomain(
+            start_id=int(EntityId.LEFT_PADDLE),
+            end_id=int(EntityId.LEFT_PADDLE),
+        ),
+        "right_paddle": EntityIdDomain(
+            start_id=int(EntityId.RIGHT_PADDLE),
+            end_id=int(EntityId.RIGHT_PADDLE),
+        ),
+        "paddle": EntityIdDomain(
+            start_id=int(EntityId.LEFT_PADDLE),
+            end_id=int(EntityId.RIGHT_PADDLE),
+        ),
+        "ball": EntityIdDomain(
+            start_id=int(EntityId.BALL),
+            end_id=int(EntityId.BALL),
+        ),
+    }
     viewport: tuple[float, float]
     score: ScoreState = field(default_factory=ScoreState)
     paused: bool = False
@@ -58,11 +79,48 @@ class PongWorld(BaseWorld):
     slow_mo: bool = False
     slow_ball: bool = False
     slow_mo_scale: float = 0.25
+    ball_spawn_position: tuple[float, float] = (0.0, 0.0)
+    ball_reset_speed: tuple[float, float] = (250.0, 200.0)
 
     trail_mode: bool = False
     trail: Deque[tuple[float, float]] = field(
         default_factory=lambda: deque(maxlen=30)
     )
+
+    def ball(self):
+        """Return the current ball entity, if present in the world."""
+
+        ball = self.find_entity(tag="ball")
+        if ball is not None:
+            return ball
+        entities = self.get_entities_in_domain("ball")
+        return entities[0] if entities else None
+
+    def paddles(self):
+        """Return both paddle entities, preferring tag lookups when available."""
+
+        paddles = self.get_entities_by_tag("paddle")
+        if paddles:
+            return paddles
+        return self.get_entities_in_domain("paddle")
+
+    def left_paddle(self):
+        """Return the left paddle entity, if present."""
+
+        paddle = self.find_entity(tag="left_paddle")
+        if paddle is not None:
+            return paddle
+        entities = self.get_entities_in_domain("left_paddle")
+        return entities[0] if entities else None
+
+    def right_paddle(self):
+        """Return the right paddle entity, if present."""
+
+        paddle = self.find_entity(tag="right_paddle")
+        if paddle is not None:
+            return paddle
+        entities = self.get_entities_in_domain("right_paddle")
+        return entities[0] if entities else None
 
 
 @dataclass(frozen=True)

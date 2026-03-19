@@ -43,13 +43,16 @@ class MenuScene(BaseMenuScene):
             background_color=(
                 (*BACKGROUND, 1.0) if len(BACKGROUND) == 3 else BACKGROUND
             ),
+            title_font_name="title",
+            item_font_name="default",
+            hint_font_name="default",
             button_enabled=True,
             button_fill=BUTTON_FILL,
             button_border=BUTTON_BORDER,
             button_selected_border=HIGHLIGHT,
             normal=DIM,
             selected=WHITE,
-            hint="Press ENTER to start · ESC to quit",
+            hint="Press ENTER to start | ESC to quit | F1 debug",
             hint_color=(200, 200, 200),
         )
 
@@ -64,7 +67,7 @@ class MenuScene(BaseMenuScene):
         :return: Label string showing the current difficulty.
         :rtype: str
         """
-        difficulty = ctx.settings.difficulty.upper()
+        difficulty = ctx.settings.difficulty.level.upper()
         return f"DIFFICULTY: {difficulty}"
 
     def menu_items(self):

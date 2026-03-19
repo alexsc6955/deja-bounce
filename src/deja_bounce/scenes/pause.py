@@ -25,6 +25,10 @@ class PauseScene(BaseMenuScene):
         return MenuStyle(
             overlay_color=(0, 0, 0, 0.5),
             panel_color=(20, 20, 20, 0.75),
+            title_font_name="title",
+            item_font_name="default",
+            hint_font_name="default",
+            hint="ENTER select | ESC resume | F1 debug",
         )
 
     def menu_items(self):

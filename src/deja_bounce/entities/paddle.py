@@ -4,9 +4,20 @@ Paddle entity for Deja Bounce.
 
 from __future__ import annotations
 
+from typing import Any
+
 from mini_arcade_core.engine.entities import BaseEntity
+from mini_arcade_core.scenes.entity_blueprints import build_entity_payload
 
 from deja_bounce.entities.entity_id import EntityId
+
+
+def _paddle_tags(entity_id: EntityId) -> tuple[str, ...]:
+    if int(entity_id) == int(EntityId.LEFT_PADDLE):
+        return ("paddle", "left_paddle")
+    if int(entity_id) == int(EntityId.RIGHT_PADDLE):
+        return ("paddle", "right_paddle")
+    return ("paddle",)
 
 
 class Paddle(BaseEntity):
@@ -43,5 +54,27 @@ class Paddle(BaseEntity):
                 "style": {
                     "fill": (255, 255, 255, 255),
                 },
+                "tags": list(_paddle_tags(entity_id)),
             }
         )
+
+    @staticmethod
+    def build_from_template(
+        entity_id: EntityId,
+        name: str,
+        template: dict[str, Any],
+        *,
+        viewport: tuple[float, float],
+    ) -> "Paddle":
+        """Build a paddle entity from a template plus runtime overrides."""
+
+        payload = build_entity_payload(
+            template,
+            viewport=viewport,
+            overrides={
+                "id": int(entity_id),
+                "name": name,
+                "tags": list(_paddle_tags(entity_id)),
+            },
+        )
+        return Paddle.from_dict(payload)
